@@ -67,6 +67,7 @@
 #include "bdroid_buildcfg.h"
 #endif
 
+#include <hardware/bt_av.h>
 #include "bt_types.h" /* This must be defined AFTER buildcfg.h */
 
 //------------------Added from bdroid_buildcfg.h---------------------
