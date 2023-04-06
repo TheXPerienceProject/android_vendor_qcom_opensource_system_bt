@@ -2647,7 +2647,7 @@ static void bta_dm_discover_next_device(void) {
  ******************************************************************************/
 static void bta_dm_discover_device(const RawAddress& remote_bd_addr) {
   tBT_TRANSPORT transport = BT_TRANSPORT_BR_EDR;
-  tBLE_ADDR_TYPE addr_type;
+  tBLE_ADDR_TYPE addr_type = BLE_ADDR_PUBLIC;
   if (bta_dm_search_cb.transport == BTA_TRANSPORT_UNKNOWN) {
     tBT_DEVICE_TYPE dev_type;
 
