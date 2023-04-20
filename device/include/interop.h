@@ -298,6 +298,17 @@ typedef enum {
   // local device to be only master as role switch would be restricted during connection.
   INTEROP_DISABLE_ROLE_SWITCH_DURING_CONNECTION,
 
+  //Add remote device into L2CAP_DISCONNECT_ACL_DIRECTLY blacklist
+  INTEROP_L2CAP_DISCONNECT_ACL_DIRECTLY,
+
+  // Skip Robust Caching Read of client supported featuresc characteristic for specific devices
+  // Some remote devices do not respond to ATT_READ_BY_TYPE_REQ(for Client Supported Features
+  // characteristic) sent  by local device for Robust caching support and this results in
+  // GATT response timeout and LE link disconnection. This interop arrangement will make local
+  // device to skip reading of Client supported features characteristic with devices in the
+  // interop list.
+  INTEROP_SKIP_ROBUST_CACHING_READ,
+
   END_OF_INTEROP_LIST
 } interop_feature_t;
 

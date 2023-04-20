@@ -991,6 +991,11 @@ void* bta_av_co_audio_src_data_path(const uint8_t* p_codec_info,
     return NULL;
   }
 
+  if (p_buf->offset < 4) {
+    APPL_TRACE_ERROR("%s: No space for timestamp in packet, dropped", __func__);
+    return NULL;
+  }
+
   /*
    * Retrieve the timestamp information from the media packet,
    * and set up the packet header.
@@ -1004,6 +1009,7 @@ void* bta_av_co_audio_src_data_path(const uint8_t* p_codec_info,
       !A2DP_BuildCodecHeader(p_codec_info, p_buf, p_buf->layer_specific)) {
     APPL_TRACE_ERROR("%s: unsupported codec type (%d)", __func__,
                      A2DP_GetCodecType(p_codec_info));
+    return NULL;
   }
 
 #if (BTA_AV_CO_CP_SCMS_T == TRUE)

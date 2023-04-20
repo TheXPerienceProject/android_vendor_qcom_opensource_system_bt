@@ -557,6 +557,10 @@ static bool allow_low_latency_audio(bool allowed, const RawAddress& address) {
   return false;
 }
 
+static void metadata_changed(const RawAddress& remote_bd_addr, int key,
+                             std::vector<uint8_t> value) {
+}
+
 EXPORT_SYMBOL bt_interface_t bluetoothInterface = {
     sizeof(bluetoothInterface),
     init,
@@ -598,6 +602,7 @@ EXPORT_SYMBOL bt_interface_t bluetoothInterface = {
     generate_local_oob_data,
     allow_low_latency_audio,
     clear_event_filter,
+    metadata_changed,
 };
 
 void invoke_oob_data_request_cb(tBT_TRANSPORT t, bool valid, Octet16 c,

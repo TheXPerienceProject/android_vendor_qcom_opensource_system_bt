@@ -221,6 +221,12 @@ bool clear_resolving_list_bit(void* data, void* context) {
  ******************************************************************************/
 void btm_ble_clear_resolving_list_complete(uint8_t* p, uint16_t evt_len) {
   uint8_t status = 0;
+
+  if (evt_len < 1) {
+    BTM_TRACE_ERROR("malformatted event packet: containing zero bytes");
+    return;
+  }
+
   STREAM_TO_UINT8(status, p);
 
   BTM_TRACE_DEBUG("%s status=%d", __func__, status);
@@ -265,6 +271,12 @@ void btm_ble_clear_resolving_list_complete(uint8_t* p, uint16_t evt_len) {
  ******************************************************************************/
 void btm_ble_add_resolving_list_entry_complete(uint8_t* p, uint16_t evt_len) {
   uint8_t status;
+
+  if (evt_len < 1) {
+    BTM_TRACE_ERROR("malformatted event packet: containing zero bytes");
+    return;
+  }
+
   STREAM_TO_UINT8(status, p);
 
   BTM_TRACE_DEBUG("%s status = %d", __func__, status);

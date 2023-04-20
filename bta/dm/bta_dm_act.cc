@@ -15,40 +15,6 @@
  *  limitations under the License.
  *
  *  Changes from Qualcomm Innovation Center are provided under the following license:
- *
- *  Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted (subject to the limitations in the
- *  disclaimer below) provided that the following conditions are met:
- *
- *  Redistributions of source code must retain the above copyright
- *  notice, this list of conditions and the following disclaimer.
- *
- *  Redistributions in binary form must reproduce the above
- *  copyright notice, this list of conditions and the following
- *  disclaimer in the documentation and/or other materials provided
- *  with the distribution.
- *
- *  Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
- *  contributors may be used to endorse or promote products derived
- *  from this software without specific prior written permission.
- *
- *  NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
- *  GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
- *  HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
- *  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- *  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- *  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
- *  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- *  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- *  GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- *  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
- *  IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- *  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
- *  IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
- *
- *  Changes from Qualcomm Innovation Center are provided under the following license:
  *  Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *  SPDX-License-Identifier: BSD-3-Clause-Clear
  ******************************************************************************/
@@ -2923,7 +2889,7 @@ static void bta_dm_rem_name_cback (const RawAddress& bd_addr, DEV_CLASS dc, BD_N
 static void bta_dm_service_search_remname_cback(const RawAddress& bd_addr,
                                                 UNUSED_ATTR DEV_CLASS dc,
                                                 BD_NAME bd_name) {
-  tBTM_REMOTE_DEV_NAME rem_name;
+  tBTM_REMOTE_DEV_NAME rem_name = {};
   tBTM_STATUS btm_status;
 
   APPL_TRACE_DEBUG("%s name=<%s>", __func__, bd_name);
@@ -2937,7 +2903,7 @@ static void bta_dm_service_search_remname_cback(const RawAddress& bd_addr,
     }
     strlcpy((char*)rem_name.remote_bd_name, (char*)bd_name, BD_NAME_LEN + 1);
     rem_name.status = BTM_SUCCESS;
-
+    rem_name.hci_status = HCI_SUCCESS;
     bta_dm_remname_cback(&rem_name);
   } else {
     /* get name of device */
@@ -2955,6 +2921,7 @@ static void bta_dm_service_search_remname_cback(const RawAddress& bd_addr,
       rem_name.length = 0;
       rem_name.remote_bd_name[0] = 0;
       rem_name.status = btm_status;
+      rem_name.hci_status = HCI_SUCCESS;
       bta_dm_remname_cback(&rem_name);
     }
   }
@@ -2975,18 +2942,31 @@ static void bta_dm_remname_cback(void* p) {
                    p_remote_name->length, p_remote_name->remote_bd_name);
 
   if ((p_remote_name->bd_addr != RawAddress::kEmpty) &&
-      (p_remote_name->bd_addr != bta_dm_search_cb.peer_bdaddr)) {
-    VLOG(1) << "bta_dm_remname_cback ,rnr complete for diff device,return"
-    << " search_cb.peer_dbaddr:" << bta_dm_search_cb.peer_bdaddr
-    << " p_remote_name_bda=" << p_remote_name->bd_addr;
-    return;
+      (p_remote_name->bd_addr == bta_dm_search_cb.peer_bdaddr)) {
+    BTM_SecDeleteRmtNameNotifyCallback(&bta_dm_service_search_remname_cback);
+  } else {
+    VLOG(1) << "bta_dm_remname_cback ,rnr complete for diff device,return";
+    // if we got a different response, maybe ignore it
+    // we will have made a request directly from BTM_ReadRemoteDeviceName so we
+    // expect a dedicated response for us
+    if (p_remote_name->hci_status == HCI_ERR_CONNECTION_EXISTS) {
+      BTM_SecDeleteRmtNameNotifyCallback(
+          &bta_dm_service_search_remname_cback);
+      VLOG(1) << "Assume command failed due to disconnection hci_status:"
+      << p_remote_name->hci_status
+      << " p_remote_name_bda=" << p_remote_name->bd_addr;
+    } else {
+      VLOG(1) << "Ignored remote name response for the wrong address exp:"
+      << " search_cb.peer_dbaddr:" << bta_dm_search_cb.peer_bdaddr
+      << " act: p_remote_name_bda=" << p_remote_name->bd_addr;
+      return;
+    }
   }
+
   /* remote name discovery is done but it could be failed */
   bta_dm_search_cb.name_discover_done = true;
   strlcpy((char*)bta_dm_search_cb.peer_name,
           (char*)p_remote_name->remote_bd_name, BD_NAME_LEN + 1);
-
-  BTM_SecDeleteRmtNameNotifyCallback(&bta_dm_service_search_remname_cback);
 
   if (bta_dm_search_cb.transport == BT_TRANSPORT_LE) {
     GAP_BleReadPeerPrefConnParams(bta_dm_search_cb.peer_bdaddr);

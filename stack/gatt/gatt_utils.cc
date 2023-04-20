@@ -79,6 +79,8 @@
 #include <vector>
 #include <algorithm>
 
+#include "device/include/interop_config.h"
+
 using base::StringPrintf;
 using bluetooth::Uuid;
 
@@ -693,6 +695,18 @@ void gatt_start_ind_ack_timer(tGATT_TCB& tcb, uint16_t lcid) {
 
 }
 
+static tGATT_PROFILE_CLCB* gatt_find_profile_clcb_by_conn_id(uint16_t conn_id) {
+  uint8_t i_clcb;
+  tGATT_PROFILE_CLCB* p_clcb = NULL;
+
+  for (i_clcb = 0, p_clcb = gatt_cb.profile_clcb; i_clcb < GATT_MAX_APPS;
+       i_clcb++, p_clcb++) {
+    if (p_clcb->in_use && p_clcb->conn_id == conn_id) return p_clcb;
+  }
+
+  return NULL;
+}
+
 /*******************************************************************************
  *
  * Function         gatt_rsp_timeout
@@ -714,6 +728,24 @@ void gatt_rsp_timeout(void* data) {
 
   uint16_t lcid = p_clcb->p_tcb->att_lcid;
   tGATT_TCB* p_tcb = p_clcb->p_tcb;
+
+  if (p_clcb->operation == GATTC_OPTYPE_READ &&
+      p_clcb->op_subtype == GATT_READ_BY_TYPE &&
+      p_clcb->uuid == Uuid::From16Bit(GATT_UUID_GATT_CL_SUPP_FEATURES)) {
+    tGATT_PROFILE_CLCB* p_pro_clcb;
+    p_pro_clcb = gatt_find_profile_clcb_by_conn_id(p_clcb->conn_id);
+    if (p_pro_clcb &&
+        p_pro_clcb->in_use && p_pro_clcb->connected &&
+        p_pro_clcb->transport == BT_TRANSPORT_LE &&
+        p_pro_clcb->robust_caching_stage == GATT_ROBUST_CACHING_CL_SUPP_FEAT_READ) {
+      BD_NAME bd_name;
+      VLOG(1) << __func__ << ": BTM_GetRemoteDeviceName peer_bda = " << p_pro_clcb->bda;
+      if (BTM_GetRemoteDeviceName(p_pro_clcb->bda, bd_name)) {
+        VLOG(1) << __func__ << ": interop_database_add_name Name = " << bd_name;
+        interop_database_add_name(INTEROP_SKIP_ROBUST_CACHING_READ, (char*) bd_name);
+      }
+    }
+  }
 
   if (p_clcb->p_tcb->is_eatt_supported) {
     lcid = gatt_get_cid_by_conn_id(p_clcb->conn_id);

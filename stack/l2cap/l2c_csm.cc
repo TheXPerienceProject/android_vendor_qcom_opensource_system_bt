@@ -1943,6 +1943,14 @@ static void l2c_csm_open(tL2C_CCB* p_ccb, uint16_t event, void* p_data) {
       break;
 
     case L2CEVT_L2CA_DISCONNECT_REQ: /* Upper wants to disconnect */
+      if (p_ccb->p_lcb->transport == BT_TRANSPORT_BR_EDR &&
+        p_ccb->p_rcb->psm != BT_PSM_SDP &&
+        interop_match_addr_or_name(INTEROP_L2CAP_DISCONNECT_ACL_DIRECTLY,
+        &p_ccb->p_lcb->remote_bd_addr)) {
+        L2CAP_TRACE_ERROR("disconnect acl directly.");
+        btm_sec_disconnect(p_ccb->p_lcb->handle, HCI_ERR_PEER_USER);
+      }
+
       if (p_ccb->p_lcb->transport != BT_TRANSPORT_LE) {
         /* Make sure we are not in sniff mode */
         {
@@ -2390,8 +2398,9 @@ void l2c_enqueue_peer_data(tL2C_CCB* p_ccb, BT_HDR* p_buf) {
         "p_ccb->local_cid = %u p_ccb->remote_cid = %u",
         __func__, p_ccb, p_ccb->in_use, p_ccb->chnl_state, p_ccb->local_cid,
         p_ccb->remote_cid);
+  } else {
+    fixed_queue_enqueue(p_ccb->xmit_hold_q, p_buf);
   }
-  fixed_queue_enqueue(p_ccb->xmit_hold_q, p_buf);
 
   l2cu_check_channel_congestion(p_ccb);
 

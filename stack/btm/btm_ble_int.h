@@ -67,8 +67,8 @@ extern void btm_ble_init(void);
 extern void btm_ble_connected(const RawAddress& bda, uint16_t handle,
                               uint8_t enc_mode, uint8_t role,
                               tBLE_ADDR_TYPE addr_type, bool addr_matched);
-extern void btm_ble_read_remote_features_complete(uint8_t* p);
-extern void btm_ble_write_adv_enable_complete(uint8_t* p);
+extern void btm_ble_read_remote_features_complete(uint8_t* p, uint8_t length);
+extern void btm_ble_write_adv_enable_complete(uint8_t* p, uint16_t evt_len);
 extern void btm_ble_conn_complete(uint8_t* p, uint16_t evt_len, bool enhanced);
 extern void btm_read_ble_local_supported_states_complete(uint8_t* p,
                                                          uint16_t evt_len);
@@ -116,7 +116,7 @@ extern bool btm_ble_get_enc_key_type(const RawAddress& bd_addr,
                                      uint8_t* p_key_types);
 
 extern void btm_ble_test_command_complete(uint8_t* p);
-extern void btm_ble_rand_enc_complete(uint8_t* p, uint16_t op_code,
+extern void btm_ble_rand_enc_complete(uint8_t* p, uint16_t evt_len, uint16_t op_code,
                                       tBTM_RAND_ENC_CB* p_enc_cplt_cback);
 
 extern void btm_sec_save_le_key(const RawAddress& bd_addr,

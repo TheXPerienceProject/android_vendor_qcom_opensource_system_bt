@@ -707,7 +707,8 @@ void l2cble_process_sig_cmd(tL2C_LCB* p_lcb, uint8_t* p, uint16_t pkt_len) {
           LOG(ERROR) << "invalid read";
           return;
         }
-
+        L2CAP_TRACE_DEBUG("Reset local_id after recving L2CAP_CMD_BLE_CREDIT_BASED_CONN_RES");
+        p_ccb->local_id = 0;
         STREAM_TO_UINT16(p_ccb->remote_cid, p);
         STREAM_TO_UINT16(p_ccb->peer_conn_cfg.mtu, p);
         STREAM_TO_UINT16(p_ccb->peer_conn_cfg.mps, p);
@@ -862,7 +863,8 @@ void l2cble_process_sig_cmd(tL2C_LCB* p_lcb, uint8_t* p, uint16_t pkt_len) {
           return;
         }
         uint16_t dest_cid[5] = {0};
-
+        L2CAP_TRACE_DEBUG("Reset local_id after recving L2CAP_CMD_CREDIT_BASED_CONNECTION_RSP");
+        p_ccb->local_id = 0;
         STREAM_TO_UINT16(p_ccb->peer_conn_cfg.mtu, p);
         STREAM_TO_UINT16(p_ccb->peer_conn_cfg.mps, p);
         STREAM_TO_UINT16(p_ccb->peer_conn_cfg.credits, p);

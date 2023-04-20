@@ -274,7 +274,7 @@ bool is_soc_lpa_enh_pwr_enabled() {
 static future_t* start_up(void) {
   BT_HDR* response;
   uint8_t adv_audio_support_mask = 0;
-  char adv_audio_property[2] = {};
+  char adv_audio_property[PROPERTY_VALUE_MAX] = {0};
 
   osi_property_get("persist.vendor.service.bt.adv_audio_mask", adv_audio_property, "0");
   adv_audio_support_mask = (uint8_t)atoi(adv_audio_property);

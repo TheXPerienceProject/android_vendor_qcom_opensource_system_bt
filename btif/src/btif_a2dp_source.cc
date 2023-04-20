@@ -66,6 +66,7 @@ using ::bluetooth::audio::a2dp::SessionType;
 #include "btif_hf.h"
 #include "btif_av.h"
 #include "bta_sys.h"
+#include "btif_acm.h"
 using system_bt_osi::BluetoothMetricsLogger;
 using system_bt_osi::A2dpSessionMetrics;
 
@@ -173,6 +174,9 @@ extern bool btif_av_is_idx_tws_device(int index);
 extern int btif_av_get_tws_pair_idx(int index);
 extern void btif_av_clear_pending_start_flag();
 extern bool btif_av_is_tws_suspend_triggered(int index);
+
+extern bool btif_acm_check_in_call_tracker_timer_exist();
+extern void stop_stream_acm_initiator_now();
 
 static char a2dp_hal_imp[PROPERTY_VALUE_MAX] = "false";
 UNUSED_ATTR static const char* dump_media_event(uint16_t event) {
@@ -398,25 +402,30 @@ static void btif_a2dp_source_remote_start_timeout(UNUSED_ATTR void* context) {
     btif_a2dp_source_cb.remote_start_alarm = NULL;
     btif_a2dp_source_cb.last_remote_started_index = -1;
     btif_a2dp_source_cb.last_started_index_pointer = NULL;
+    if(arg) {
+      osi_free(arg);
+    }
   }
   btif_dispatch_sm_event(BTIF_AV_REMOTE_SUSPEND_STREAM_REQ_EVT, &index, sizeof(index));
-  if(arg) {
-    osi_free(arg);
-  }
   return;
 }
 
 void btif_a2dp_source_on_remote_start(struct alarm_t **remote_start_alarm, int index) {
   // initiate remote start timer for index basis
   int *arg = NULL;
-  arg = (int *) osi_malloc(sizeof(int));
   if (remote_start_alarm == NULL) {
     LOG_ERROR(LOG_TAG,"%s:remote start alarm is NULL",__func__);
     return;
   }
+  arg = (int *) osi_malloc(sizeof(int));
+  if (!arg) {
+    LOG_ERROR(LOG_TAG,"%s: alloc fail.", __func__);
+    return;
+  }
   *remote_start_alarm = alarm_new("btif.remote_start_task");
-  if (!(*remote_start_alarm) || !arg) {
+  if (!(*remote_start_alarm)) {
     LOG_ERROR(LOG_TAG,"%s:unable to allocate media alarm",__func__);
+    osi_free(arg);
     btif_av_clear_remote_start_timer(index);
     btif_dispatch_sm_event(BTIF_AV_SUSPEND_STREAM_REQ_EVT, &index, sizeof(index));
     return;
@@ -1820,6 +1829,12 @@ void btif_a2dp_source_process_request(tA2DP_CTRL_CMD cmd) {
         break;
       }
       if (!bluetooth::headset::btif_hf_is_call_vr_idle()) {
+        status = A2DP_CTRL_ACK_INCALL_FAILURE;
+        break;
+      }
+      if (btif_ahim_is_aosp_aidl_hal_enabled() &&
+          btif_acm_check_in_call_tracker_timer_exist()) {
+        stop_stream_acm_initiator_now();
         status = A2DP_CTRL_ACK_INCALL_FAILURE;
         break;
       }

@@ -898,6 +898,9 @@ void bta_ag_post_sco_open(tBTA_AG_SCB* p_scb, tBTA_AG_DATA* p_data) {
  *
  ******************************************************************************/
 void bta_ag_post_sco_close(tBTA_AG_SCB* p_scb, tBTA_AG_DATA* p_data) {
+  APPL_TRACE_IMP("%s: post_sco is %x, device %s",
+                  __func__, p_scb->post_sco,
+                  p_scb->peer_addr.ToString().c_str());
   switch (p_scb->post_sco) {
     case BTA_AG_POST_SCO_CLOSE_RFC:
       bta_ag_rfc_do_close(p_scb, p_data);
@@ -917,13 +920,33 @@ void bta_ag_post_sco_close(tBTA_AG_SCB* p_scb, tBTA_AG_DATA* p_data) {
     case BTA_AG_POST_SCO_CALL_END:
       for (size_t i = 0; i < BTA_AG_MAX_NUM_CLIENTS; i++) {
         if (bta_ag_cb.scb[i].in_use &&
-            bta_ag_cb.scb[i].svc_conn &&
-            bta_ag_cb.scb[i].post_sco == BTA_AG_POST_SCO_CALL_END) {
-           bta_ag_send_call_inds(&bta_ag_cb.scb[i], BTA_AG_END_CALL_RES);
-           bta_ag_cb.scb[i].post_sco = BTA_AG_POST_SCO_NONE;
-           APPL_TRACE_IMP("%s: sending call end indicators after SCO close for scb" \
+            bta_ag_cb.scb[i].svc_conn) {
+
+           if(bta_ag_cb.scb[i].post_sco == BTA_AG_POST_SCO_CALL_END) {
+             bta_ag_send_call_inds(&bta_ag_cb.scb[i], BTA_AG_END_CALL_RES);
+             bta_ag_cb.scb[i].post_sco = BTA_AG_POST_SCO_NONE;
+             APPL_TRACE_IMP("%s: sending call end indicators after SCO close for scb" \
               " on index %x, device %s",
                __func__, i, bta_ag_cb.scb[i].peer_addr.ToString().c_str());
+           } else if(bta_ag_cb.scb[i].post_sco == BTA_AG_POST_SCO_CALL_END_INCALL) {
+             bta_ag_send_call_inds(&bta_ag_cb.scb[i], BTA_AG_END_CALL_RES);
+
+             /* Sending callsetup IND and Ring were defered to after SCO close. */
+             bta_ag_send_call_inds(&bta_ag_cb.scb[i], BTA_AG_IN_CALL_RES);
+             APPL_TRACE_IMP("%s: sending call end and incoming indicators after SCO close for scb" \
+             " on index %x, device %s",
+             __func__, i, bta_ag_cb.scb[i].peer_addr.ToString().c_str());
+
+             if (bta_ag_inband_enabled(&bta_ag_cb.scb[i]) &&
+                 !(bta_ag_cb.scb[i].features & BTA_AG_FEAT_NOSCO) &&
+                 bta_ag_sco_is_active_device(bta_ag_cb.scb[i].peer_addr)) {
+               bta_ag_cb.scb[i].post_sco = BTA_AG_POST_SCO_RING;
+               bta_ag_sco_open(&bta_ag_cb.scb[i], p_data);
+             } else {
+               bta_ag_cb.scb[i].post_sco = BTA_AG_POST_SCO_NONE;
+               bta_ag_send_ring(&bta_ag_cb.scb[i], p_data);
+             }
+           }
         }
       }
       break;

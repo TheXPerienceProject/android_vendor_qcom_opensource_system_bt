@@ -58,6 +58,8 @@
 #define LOG_TAG "bt_bta_gattc"
 
 #include <base/logging.h>
+#include "osi/include/log.h"
+
 #include <string.h>
 
 #include "bt_common.h"
@@ -240,8 +242,27 @@ void bta_gattc_clcb_dealloc(tBTA_GATTC_CLCB* p_clcb) {
     p_srcb->gatt_database.Clear();
   }
 
+  while (!p_clcb->p_q_cmd_queue.empty()) {
+    auto p_q_cmd = p_clcb->p_q_cmd_queue.front();
+    p_clcb->p_q_cmd_queue.pop_front();
+    osi_free_and_reset((void**)&p_q_cmd);
+  }
+
   osi_free_and_reset((void**)&p_clcb->p_q_cmd);
-  memset(p_clcb, 0, sizeof(tBTA_GATTC_CLCB));
+
+  /* Clear p_clcb. Some of the fields are already reset e.g. p_q_cmd_queue and
+   * p_q_cmd. */
+  p_clcb->bta_conn_id = 0;
+  p_clcb->bda = {};
+  p_clcb->transport = 0;
+  p_clcb->p_rcb = NULL;
+  p_clcb->p_srcb = NULL;
+  p_clcb->request_during_discovery = 0;
+  p_clcb->auto_update = 0;
+  p_clcb->disc_active = 0;
+  p_clcb->in_use = 0;
+  p_clcb->state = BTA_GATTC_IDLE_ST;
+  p_clcb->status = GATT_SUCCESS;
 }
 
 /*******************************************************************************
@@ -338,24 +359,56 @@ tBTA_GATTC_SERV* bta_gattc_srcb_alloc(const RawAddress& bda) {
   }
   return p_tcb;
 }
+
+void bta_gattc_continue(tBTA_GATTC_CLCB* p_clcb) {
+  if (p_clcb->p_q_cmd != NULL) {
+    VLOG(1) << __func__ << "Already scheduled another request for conn_id = 0x"
+            << +p_clcb->bta_conn_id;
+    return;
+  }
+
+  if (p_clcb->p_q_cmd_queue.empty()) {
+    VLOG(1) << __func__ << "Nothing to do for conn_id = 0x" << +p_clcb->bta_conn_id;
+    return;
+  }
+
+  tBTA_GATTC_DATA* p_q_cmd = p_clcb->p_q_cmd_queue.front();
+  p_clcb->p_q_cmd_queue.pop_front();
+  bta_gattc_sm_execute(p_clcb, p_q_cmd->hdr.event, p_q_cmd);
+}
+
+bool bta_gattc_is_data_queued(tBTA_GATTC_CLCB* p_clcb,
+                              tBTA_GATTC_DATA* p_data) {
+  if (p_clcb->p_q_cmd == p_data) {
+    return true;
+  }
+
+  auto it = std::find(p_clcb->p_q_cmd_queue.begin(),
+                      p_clcb->p_q_cmd_queue.end(), p_data);
+  return it != p_clcb->p_q_cmd_queue.end();
+}
 /*******************************************************************************
  *
  * Function         bta_gattc_enqueue
  *
  * Description      enqueue a client request in clcb.
  *
- * Returns          success or failure.
+ * Returns          BtaEnqueuedResult_t
  *
  ******************************************************************************/
-bool bta_gattc_enqueue(tBTA_GATTC_CLCB* p_clcb, tBTA_GATTC_DATA* p_data) {
+BtaEnqueuedResult_t bta_gattc_enqueue(tBTA_GATTC_CLCB* p_clcb, tBTA_GATTC_DATA* p_data) {
   if (p_clcb->p_q_cmd == NULL) {
     p_clcb->p_q_cmd = p_data;
-    return true;
+    return ENQUEUED_READY_TO_SEND;
   }
 
-  LOG(ERROR) << __func__ << ": already has a pending command";
-  /* skip the callback now. ----- need to send callback ? */
-  return false;
+  VLOG(1) << __func__ <<
+      "Already has a pending command to executer. Queuing for later "
+          << +p_clcb->bda.ToString().c_str()
+          << "conn id=0x" << p_clcb->bta_conn_id;
+  p_clcb->p_q_cmd_queue.push_back(p_data);
+
+  return ENQUEUED_FOR_LATER;
 }
 
 /*******************************************************************************

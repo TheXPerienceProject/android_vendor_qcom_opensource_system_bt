@@ -884,57 +884,59 @@ void btm_vendor_specific_evt(uint8_t* p, uint8_t evt_len) {
   uint8_t *pp = p;
   uint8_t vse_subcode;
 
-  STREAM_TO_UINT8 (vse_subcode, pp);
+  if (evt_len >= 2) {
+    STREAM_TO_UINT8 (vse_subcode, pp);
 
-  if(HCI_VSE_INFO_REPORT == vse_subcode) {
-    BTM_TRACE_DEBUG ("BTM Event: Vendor Specific iot info report event");
-    if (btm_cb.devcb.p_vnd_iot_info_cb) {
-      BTM_TRACE_DEBUG ("Calling bta_dm_vnd_info_report_cback");
-      (*btm_cb.devcb.p_vnd_iot_info_cb)(evt_len, pp);
-      return;
-    }
-  } else if (HCI_BT_SOC_CRASHED_OGF == vse_subcode) {
-      STREAM_TO_UINT8 (vse_subcode, pp);
-      if (HCI_BT_SOC_CRASHED_OCF == vse_subcode) {
-        decode_crash_reason(pp, (evt_len - 2));
+    if(HCI_VSE_INFO_REPORT == vse_subcode) {
+      BTM_TRACE_DEBUG ("BTM Event: Vendor Specific iot info report event");
+      if (btm_cb.devcb.p_vnd_iot_info_cb) {
+        BTM_TRACE_DEBUG ("Calling bta_dm_vnd_info_report_cback");
+        (*btm_cb.devcb.p_vnd_iot_info_cb)(evt_len, pp);
         return;
       }
-  } else if (HCI_VSE_SUBCODE_QBCE == vse_subcode) {
-    uint8_t vse_msg_type;
-
-    STREAM_TO_UINT8(vse_msg_type, pp);
-    BTM_TRACE_DEBUG("%s: QBCE VSE event received, msg = %x", __func__,
-                     vse_msg_type);
-    switch(vse_msg_type) {
-      case MSG_QBCE_QLL_CONNECTION_COMPLETE:
-        btm_ble_qll_connection_complete(pp);
-        break;
-      case MSG_QBCE_REMOTE_SUPPORTED_QLL_FEATURES_COMPLETE:
-        btm_ble_read_remote_supported_qll_features_complete(pp);
-        break;
-      case MSG_QBCE_QCM_PHY_CHANGE:
-        btm_acl_update_qcm_phy_state(pp);
-        break;
-      case MSG_QBCE_QLE_CIG_LATENCY_CHANGED:
-        if (btm_cb.devcb.p_vnd_qle_cig_latency_changed_cb) {
-          BTM_TRACE_DEBUG ("Calling qle_cig_latency_changed_cb");
-          (*btm_cb.devcb.p_vnd_qle_cig_latency_changed_cb)((evt_len - 2), pp);
+    } else if (HCI_BT_SOC_CRASHED_OGF == vse_subcode) {
+        STREAM_TO_UINT8 (vse_subcode, pp);
+        if (HCI_BT_SOC_CRASHED_OCF == vse_subcode) {
+          decode_crash_reason(pp, (evt_len - 2));
           return;
         }
-        break;
-      default:
-        BTM_TRACE_ERROR("%s: unknown msg type: %d", __func__, vse_msg_type);
-        break;
+    } else if (HCI_VSE_SUBCODE_QBCE == vse_subcode) {
+      uint8_t vse_msg_type;
+
+      STREAM_TO_UINT8(vse_msg_type, pp);
+      BTM_TRACE_DEBUG("%s: QBCE VSE event received, msg = %x", __func__,
+                       vse_msg_type);
+      switch(vse_msg_type) {
+        case MSG_QBCE_QLL_CONNECTION_COMPLETE:
+          btm_ble_qll_connection_complete(pp);
+          break;
+        case MSG_QBCE_REMOTE_SUPPORTED_QLL_FEATURES_COMPLETE:
+          btm_ble_read_remote_supported_qll_features_complete(pp);
+          break;
+        case MSG_QBCE_QCM_PHY_CHANGE:
+          btm_acl_update_qcm_phy_state(pp);
+          break;
+        case MSG_QBCE_QLE_CIG_LATENCY_CHANGED:
+          if (btm_cb.devcb.p_vnd_qle_cig_latency_changed_cb) {
+            BTM_TRACE_DEBUG ("Calling qle_cig_latency_changed_cb");
+            (*btm_cb.devcb.p_vnd_qle_cig_latency_changed_cb)((evt_len - 2), pp);
+            return;
+          }
+          break;
+        default:
+          BTM_TRACE_ERROR("%s: unknown msg type: %d", __func__, vse_msg_type);
+          break;
+      }
+      return;
+    } else if (HCI_VSE_SUBCODE_PARAMS_REPORT == vse_subcode){
+      BTM_TRACE_DEBUG ("BTM Event: Vendor Specific params report evt");
+      uint16_t delay;
+      uint8_t mode;
+      STREAM_TO_UINT16(delay, pp);
+      STREAM_TO_UINT8(mode, pp);
+      BTM_TRACE_DEBUG ("%s: Delay value = %x, Mode value = %x", __func__, delay, mode);
+      btif_update_params(delay, mode);
     }
-    return;
-  } else if (HCI_VSE_SUBCODE_PARAMS_REPORT == vse_subcode){
-    BTM_TRACE_DEBUG ("BTM Event: Vendor Specific params report evt");
-    uint16_t delay;
-    uint8_t mode;
-    STREAM_TO_UINT16(delay, pp);
-    STREAM_TO_UINT8(mode, pp);
-    BTM_TRACE_DEBUG ("%s: Delay value = %x, Mode value = %x", __func__, delay, mode);
-    btif_update_params(delay, mode);
   }
 
   BTM_TRACE_DEBUG("BTM Event: Vendor Specific event from controller");
