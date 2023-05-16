@@ -223,7 +223,7 @@ int sdp_get_stored_avrc_tg_version(RawAddress addr)
     uint16_t avrcp_features = 0;
     SDP_TRACE_DEBUG("%s target BD Addr: %s",\
              __func__, addr.ToString().c_str());
-    char pts_property[6];
+    char pts_property[PROPERTY_VALUE_MAX] = {0};
     int pts_avrcp_version;
     osi_property_get(SDP_ENABLE_PTS_AVRCP, pts_property, "false");
     if (!strncmp("true", pts_property, 4)) {

@@ -334,7 +334,8 @@ bool a2dp_get_selected_hal_codec_config(CodecConfiguration* codec_config) {
   codec_type = A2DP_GetCodecType((const uint8_t*)p_codec_info);
   codec_config->peerMtu = peer_param.peer_mtu - A2DP_HEADER_SIZE;
   if (A2DP_MEDIA_CT_SBC == codec_type) {
-    bitrate = A2DP_GetOffloadBitrateSbc(a2dp_config, peer_param.is_peer_edr);
+    bitrate = A2DP_GetOffloadBitrateSbc(a2dp_config, peer_param.is_peer_edr,
+                                        (const uint8_t*)p_codec_info);
     LOG(INFO) << __func__ << "AIDL SBC bitrate" << bitrate;
     codec_config->encodedAudioBitrate = bitrate * 1000;
   }  else if (A2DP_MEDIA_CT_NON_A2DP == codec_type) {

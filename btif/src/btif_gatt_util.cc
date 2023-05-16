@@ -58,8 +58,10 @@ void btif_to_bta_response(tGATTS_RSP* p_dest, btgatt_response_t* p_src) {
  ******************************************************************************/
 
 #if (BLE_DELAY_REQUEST_ENC == FALSE)
-static bool btif_gatt_is_link_encrypted(const RawAddress& bd_addr) {
-  return BTA_JvIsEncrypted(bd_addr);
+static bool btif_gatt_is_link_encrypted(const RawAddress& bd_addr,
+                                        tGATT_TRANSPORT transport_link) {
+  BTIF_TRACE_DEBUG(" Starting  of %s: ", __func__);
+  return BTA_JvIsEncrypted(bd_addr, transport_link);
 }
 
 static void btif_gatt_set_encryption_cb(UNUSED_ATTR const RawAddress& bd_addr,
@@ -75,11 +77,15 @@ static void btif_gatt_set_encryption_cb(UNUSED_ATTR const RawAddress& bd_addr,
 void btif_gatt_check_encrypted_link(RawAddress bd_addr,
                                     tGATT_TRANSPORT transport_link) {
   tBTM_LE_PENC_KEYS key;
+  BTIF_TRACE_DEBUG(" Starting  of %s: transport = %d", __func__,
+                   transport_link);
   if ((btif_storage_get_ble_bonding_key(
            &bd_addr, BTIF_DM_LE_KEY_PENC, (uint8_t*)&key,
            sizeof(tBTM_LE_PENC_KEYS)) == BT_STATUS_SUCCESS) &&
-      !btif_gatt_is_link_encrypted(bd_addr)) {
-    BTIF_TRACE_DEBUG("%s: transport = %d", __func__, transport_link);
+      !btif_gatt_is_link_encrypted(bd_addr, transport_link)) {
+    BTIF_TRACE_DEBUG(
+        "%s: link is not encrypted, trigger Encryption transport = %d",
+        __func__, transport_link);
     BTA_DmSetEncryption(bd_addr, transport_link, &btif_gatt_set_encryption_cb,
                         BTM_BLE_SEC_ENCRYPT);
   }

@@ -29,6 +29,7 @@
 #include "bta_api.h"
 #include "btm_api.h"
 #include "l2c_api.h"
+#include "gatt_api.h"
 
 /*****************************************************************************
  *  Constants and data types
@@ -427,7 +428,7 @@ void BTA_JvDisable(void);
  *                  false if not.
  *
  ******************************************************************************/
-bool BTA_JvIsEncrypted(const RawAddress& bd_addr);
+bool BTA_JvIsEncrypted(const RawAddress& bd_addr, tGATT_TRANSPORT transport_link);
 
 /*******************************************************************************
  *

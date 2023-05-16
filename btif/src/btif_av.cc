@@ -4876,7 +4876,12 @@ static bt_status_t set_active_device(const RawAddress& bd_addr) {
     if (!bd_addr.IsEmpty())
       btif_transfer_context(btif_av_handle_event, BTIF_AV_CHECK_PENDING_PLAY_EVT,
                                     (char *)&bd_addr, sizeof(RawAddress), NULL);
-    return BT_STATUS_SUCCESS;
+    BTIF_TRACE_EVENT("%s: session_wait: %d",__func__, session_wait);
+    if (session_wait) {
+      return BT_STATUS_SUCCESS;
+    } else {
+      return BT_STATUS_FAIL;
+    }
   } else {
     /* Initiate handoff for the device with address in the argument*/
     return btif_transfer_context(btif_av_handle_event,
@@ -6854,7 +6859,7 @@ int64_t btif_get_average_delay() {
 ** Returns          bool
 *******************************************************************************/
 bool btif_device_in_sink_role() {
-    char a2dp_role[6] = "false";
+    char a2dp_role[255] = "false";
     osi_property_get("persist.vendor.service.bt.a2dp.sink", a2dp_role, "false");
     if (strncmp("true", a2dp_role, 4) == 0){
         BTIF_TRACE_EVENT("%s: SINK role true ",__func__);
@@ -6967,7 +6972,7 @@ void btif_av_set_remote_playing_state(int index, bool playing_state) {
 *******************************************************************************/
 int btif_get_max_allowable_sink_connections() {
     int def_no_of_conn = 1;
-    char number_of_conn[2];
+    char number_of_conn[255];
     osi_property_get("persist.vendor.bt.a2dp.sink_conn", number_of_conn, "1");
     BTIF_TRACE_DEBUG("%s, number_of_conn = %s", __func__, number_of_conn);
     if (!strncmp(number_of_conn, "2", 1)) {

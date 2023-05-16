@@ -309,6 +309,10 @@ typedef enum {
   // interop list.
   INTEROP_SKIP_ROBUST_CACHING_READ,
 
+  // Some dual-mode remote devices always failed to respond to sdp request.
+  // Send out the bonded intent after 3s timeout if sdp is still not finished.
+  INTEROP_SEND_BONDED_INTENT_AFTER_SDP_TIMEOUT,
+
   END_OF_INTEROP_LIST
 } interop_feature_t;
 

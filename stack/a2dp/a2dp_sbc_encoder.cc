@@ -955,8 +955,8 @@ static uint32_t a2dp_sbc_frame_length(void) {
   return frame_len;
 }
 
-uint16_t a2dp_sbc_calulate_offload_bitrate(A2dpCodecConfig* a2dp_codec_config, bool is_peer_edr) {
-  uint8_t codec_info[AVDT_CODEC_SIZE];
+uint16_t a2dp_sbc_calulate_offload_bitrate(A2dpCodecConfig* a2dp_codec_config, bool is_peer_edr,
+                                           const uint8_t *p_codec_info) {
   uint16_t s16SamplingFreq,sample_rate;
   int16_t s16BitPool = 0;
   int16_t s16BitRate;
@@ -969,14 +969,7 @@ uint16_t a2dp_sbc_calulate_offload_bitrate(A2dpCodecConfig* a2dp_codec_config, b
   uint16_t s16AllocationMethod, s16NumOfChannels;
   uint16_t offload_bitrate;
   LOG_ERROR(LOG_TAG,"%s is peer edr = %d",__func__, is_peer_edr);
-  if (!a2dp_codec_config->copyOutOtaCodecConfig(codec_info)) {
-    LOG_ERROR(LOG_TAG,
-              "%s: Cannot update the codec encoder for %s: "
-              "invalid codec config",
-              __func__, a2dp_codec_config->name().c_str());
-    return 0;
-  }
-  const uint8_t* p_codec_info = codec_info;
+
   min_bitpool = A2DP_GetMinBitpoolSbc(p_codec_info);
   max_bitpool = A2DP_GetMaxBitpoolSbc(p_codec_info);
   // The feeding parameters
@@ -1066,11 +1059,6 @@ uint16_t a2dp_sbc_calulate_offload_bitrate(A2dpCodecConfig* a2dp_codec_config, b
                     (((32 / s16NumOfChannels) +
                       (4 * s16NumOfSubBands)) /
                      s16NumOfBlocks));
-
-     //uint16_t m16BitPool =
-     //    (s16BitPool > (16 * s16NumOfSubBands))
-     //        ? (16 * s16NumOfSubBands)
-     //        : s16BitPool;
     }
 
     if (s16BitPool < 0) s16BitPool = 0;

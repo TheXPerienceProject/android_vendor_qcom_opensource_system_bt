@@ -721,23 +721,6 @@ static void gatt_le_connect_cback(uint16_t chan, const RawAddress& bd_addr,
     }
   }
 
-  if (gatt_is_robust_caching_enabled()) {
-    bool skip_caching_enable = false;
-    BD_NAME bd_name;
-    VLOG(1) << StringPrintf("[%s] BTM_GetRemoteDeviceName: %s", __func__, bd_addr.ToString().c_str());
-    if (BTM_GetRemoteDeviceName(bd_addr, bd_name)) {
-      VLOG(1) << StringPrintf("[%s] FileDB Device name: %s", __func__, bd_name);
-      if (interop_database_match_name(INTEROP_SKIP_ROBUST_CACHING_READ, (char*) bd_name)) {
-        VLOG(1) << StringPrintf("[%s] Skip GATT_EnableRobustCaching", __func__);
-        skip_caching_enable = true;
-      }
-    }
-    VLOG(1) << StringPrintf("[%s] skip_caching_enable: %d", __func__, skip_caching_enable);
-    if (!skip_caching_enable) {
-      GATT_EnableRobustCaching(bd_addr, BT_TRANSPORT_LE);
-    }
-  }
-
 }
 
 /** This function is called to process the congestion callback from lcb */

@@ -736,6 +736,16 @@ bool A2DP_VendorAdjustCodecAptxAdaptive(uint8_t* p_codec_info) {
   return true;
 }
 
+tA2DP_STATUS A2DP_VendorIsCodecConfigMatchAptxAdaptive(const uint8_t* p_codec_info) {
+  tA2DP_APTX_ADAPTIVE_CIE aptx_adaptive_cie;
+
+  LOG_DEBUG(LOG_TAG, "%s", __func__);
+  tA2DP_STATUS a2dp_status =
+      A2DP_ParseInfoAptxAdaptive(&aptx_adaptive_cie, p_codec_info, false);
+  LOG_DEBUG(LOG_TAG, "%s: a2dp_status: %d", __func__, a2dp_status);
+  return a2dp_status;
+}
+
 btav_a2dp_codec_index_t A2DP_VendorSourceCodecIndexAptxAdaptive(
     const uint8_t* p_codec_info) {
   return BTAV_A2DP_CODEC_INDEX_SOURCE_APTX_ADAPTIVE;

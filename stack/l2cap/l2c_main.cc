@@ -394,8 +394,8 @@ static void process_l2cap_cmd(tL2C_LCB* p_lcb, uint8_t* p, uint16_t pkt_len) {
             android_errorWriteLog(0x534e4554, "74202041");
             return;
           }
-          STREAM_TO_UINT16(rcid, p);
           STREAM_TO_UINT16(lcid, p);
+          STREAM_TO_UINT16(rcid, p);
 
           L2CAP_TRACE_WARNING(
               "L2CAP - rej with CID invalid, LCID: 0x%04x RCID: 0x%04x", lcid,

@@ -1844,11 +1844,14 @@ static void btif_dm_search_services_evt(uint16_t event, char* p_param) {
           /* When SDP failed, deleting bonded device from the database and sending
           * disconnect before moving bond state to BOND NONE.
           */
-          BTIF_TRACE_WARNING("%s: deleting bonded device from database", __func__);
-          btif_storage_remove_bonded_device(&bd_addr);
-          BTA_DmRemoveDevice(bd_addr);
-          pairing_cb.sdp_attempts = 0;
-          bond_state_changed(BT_STATUS_FAIL, pairing_cb.bd_addr, BT_BOND_STATE_NONE);
+          if (!interop_match_addr_or_name(
+              INTEROP_SEND_BONDED_INTENT_AFTER_SDP_TIMEOUT, &bd_addr)) {
+            BTIF_TRACE_WARNING("%s: deleting bonded device from database", __func__);
+            btif_storage_remove_bonded_device(&bd_addr);
+            BTA_DmRemoveDevice(bd_addr);
+            pairing_cb.sdp_attempts = 0;
+            bond_state_changed(BT_STATUS_FAIL, pairing_cb.bd_addr, BT_BOND_STATE_NONE);
+          }
           return;
         }
       }

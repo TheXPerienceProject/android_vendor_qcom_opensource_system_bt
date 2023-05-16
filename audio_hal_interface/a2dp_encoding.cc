@@ -407,6 +407,8 @@ BluetoothAudioCtrlAck a2dp_ack_to_bt_audio_ctrl_ack(tA2DP_CTRL_ACK ack) {
       return BluetoothAudioCtrlAck::FAILURE;
     case A2DP_CTRL_ACK_LONG_WAIT_ERR:
       return BluetoothAudioCtrlAck::FAILURE_LONG_WAIT;
+    case A2DP_CTRL_ACK_SHORT_WAIT_ERR:
+      return BluetoothAudioCtrlAck::FAILURE_SHORT_WAIT;
     default:
       return BluetoothAudioCtrlAck::FAILURE;
   }
@@ -1425,7 +1427,8 @@ bool a2dp_get_selected_hal_codec_config(CodecConfiguration* codec_config) {
   // Obtain the MTU
   codec_config->peerMtu = peer_param.peer_mtu - A2DP_HEADER_SIZE;
   if (A2DP_MEDIA_CT_SBC == codec_type) {
-    bitrate = A2DP_GetOffloadBitrateSbc(a2dp_codec_configs, peer_param.is_peer_edr);
+    bitrate = A2DP_GetOffloadBitrateSbc(a2dp_codec_configs, peer_param.is_peer_edr,
+                                        (const uint8_t*)p_codec_info);
     LOG(INFO) << __func__ << "SBC bitrate" << bitrate;
     codec_config->encodedAudioBitrate = bitrate * 1000;
   }
@@ -2135,7 +2138,8 @@ bool a2dp_get_selected_hal_codec_config_2_1(CodecConfiguration_2_1* codec_config
   // Obtain the MTU
   codec_config->peerMtu = peer_param.peer_mtu - A2DP_HEADER_SIZE;
   if (A2DP_MEDIA_CT_SBC == codec_type) {
-    bitrate = A2DP_GetOffloadBitrateSbc(a2dp_codec_configs, peer_param.is_peer_edr);
+    bitrate = A2DP_GetOffloadBitrateSbc(a2dp_codec_configs, peer_param.is_peer_edr,
+                                        (const uint8_t*)p_codec_info);
     LOG(INFO) << __func__ << "SBC bitrate" << bitrate;
     codec_config->encodedAudioBitrate = bitrate * 1000;
   }

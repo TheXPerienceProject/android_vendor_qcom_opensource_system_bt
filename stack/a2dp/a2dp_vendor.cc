@@ -815,8 +815,14 @@ tA2DP_STATUS A2DP_VendorIsCodecConfigMatch(const uint8_t* p_codec_info) {
     return A2DP_VendorIsCodecConfigMatchLdac(p_codec_info);
   }
 
+  // Check for AptX-Adaptive
+  if (vendor_id == A2DP_APTX_ADAPTIVE_VENDOR_ID &&
+      codec_id == A2DP_APTX_ADAPTIVE_CODEC_ID_BLUETOOTH) {
+    LOG_DEBUG(LOG_TAG, "%s: checking for Aptx-Adaptive codecConfig match", __func__);
+    return A2DP_VendorIsCodecConfigMatchAptxAdaptive(p_codec_info);
+  }
+
   // Add checks based on <vendor_id, codec_id>
 
   return false;
 }
-

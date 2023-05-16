@@ -180,9 +180,21 @@ bool avdt_ccb_check_peer_eligible_for_aac_codec(tAVDT_CCB* p_ccb) {
     vndr_prdt_ver_present = true;
   }
   if (vndr_prdt_ver_present && (vendor == A2DP_AAC_BOSE_VENDOR_ID)) {
-    APPL_TRACE_DEBUG("%s: vendor id info matches ", __func__);
+    APPL_TRACE_DEBUG("%s: vendor id info matches BOSE vendor ", __func__);
     vndr_prdt_ver_present = false;
     aac_support = true;
+    if (bta_av_co_audio_device_addr_check_is_enabled(&p_ccb->peer_addr)) {
+      if (interop_match_addr_or_name(INTEROP_DISABLE_AAC_CODEC, &p_ccb->peer_addr)) {
+        AVDT_TRACE_EVENT("%s: bose device is BL, skipping AAC advertise\n", __func__);
+        aac_support = false;
+      }
+    } else {
+      if (btif_storage_get_stored_remote_name(p_ccb->peer_addr, remote_name) &&
+          interop_match_name(INTEROP_DISABLE_AAC_CODEC, remote_name)) {
+        AVDT_TRACE_EVENT("%s: bose device is BL, skipping AAC advertise\n", __func__);
+        aac_support = false;
+      }
+    }
   } else if (vndr_prdt_ver_present &&
       interop_match_vendor_product_ids(INTEROP_ENABLE_AAC_CODEC, vendor, product) &&
       interop_database_match_version(INTEROP_ENABLE_AAC_CODEC, version)) {

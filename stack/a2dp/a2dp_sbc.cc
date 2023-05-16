@@ -746,8 +746,9 @@ int A2DP_GetMaxBitpoolSbc(const uint8_t* p_codec_info) {
   return sbc_cie.max_bitpool;
 }
 
-uint16_t A2DP_GetOffloadBitrateSbc(A2dpCodecConfig* a2dp_codec_config, bool peer_edr) {
-  return a2dp_sbc_calulate_offload_bitrate(a2dp_codec_config, peer_edr);
+uint16_t A2DP_GetOffloadBitrateSbc(A2dpCodecConfig* a2dp_codec_config, bool peer_edr,
+                                   const uint8_t* p_codec_info) {
+  return a2dp_sbc_calulate_offload_bitrate(a2dp_codec_config, peer_edr, p_codec_info);
 }
 int A2DP_GetSinkTrackChannelTypeSbc(const uint8_t* p_codec_info) {
   tA2DP_SBC_CIE sbc_cie;

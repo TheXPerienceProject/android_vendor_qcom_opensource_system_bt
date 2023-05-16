@@ -206,4 +206,8 @@ const char* A2DP_VendorCodecIndexStrAptxAdaptive(void);
 // configuration entry pointed by |p_cfg|.
 bool A2DP_VendorInitCodecConfigAptxAdaptive(tAVDT_CFG* p_cfg);
 
+// Checks peer initiated setconfig with DUT supported config
+// and returns proper status.
+tA2DP_STATUS A2DP_VendorIsCodecConfigMatchAptxAdaptive(const uint8_t* p_codec_info);
+
 #endif  // A2DP_VENDOR_APTX_ADAPTIVE_H

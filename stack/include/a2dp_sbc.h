@@ -261,8 +261,10 @@ bool A2DP_InitCodecConfigSbcSink(tAVDT_CFG* p_cfg);
 // Get SBC bitrate for offload mode
 // |config| contains codec info
 // |is_peer_edr| flag is true if peer is edr else false
+// |p_codec_info| contains codec param info
 // Returns |uint16_t| bitrate value
-uint16_t A2DP_GetOffloadBitrateSbc(A2dpCodecConfig* config, bool is_peer_edr);
+uint16_t A2DP_GetOffloadBitrateSbc(A2dpCodecConfig* config, bool is_peer_edr,
+                                   const uint8_t* p_codec_info);
 
 // Checks peer initiated setconfig with DUT supported config
 // and returns proper status.

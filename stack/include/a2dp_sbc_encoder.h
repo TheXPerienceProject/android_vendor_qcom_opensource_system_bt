@@ -65,5 +65,5 @@ void a2dp_sbc_send_frames(uint64_t timestamp_us);
 // |peer_edr| flag for peer supports edr
 // Returns |uint16_t| calculated bitrare
 uint16_t a2dp_sbc_calulate_offload_bitrate(A2dpCodecConfig* a2dp_codec_config,
-                                           bool peer_edr);
+                                           bool peer_edr, const uint8_t* p_codec_info);
 #endif  // A2DP_SBC_ENCODER_H

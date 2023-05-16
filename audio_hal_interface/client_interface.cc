@@ -63,6 +63,8 @@ std::ostream& operator<<(std::ostream& os, const BluetoothAudioCtrlAck& ack) {
       return os << "FAILURE";
     case BluetoothAudioCtrlAck::FAILURE_LONG_WAIT:
       return os << "FAILURE_LONG_WAIT";
+    case BluetoothAudioCtrlAck::FAILURE_SHORT_WAIT:
+      return os << "FAILURE_SHORT_WAIT";
     default:
       return os << "UNDEFINED " << static_cast<int8_t>(ack);
   }
