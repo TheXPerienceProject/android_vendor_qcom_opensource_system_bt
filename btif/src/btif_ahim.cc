@@ -528,8 +528,7 @@ LeAudioConfiguration fetch_offload_audio_config(int profile, int direction) {
   CodecIndex codec_type = (CodecIndex) pclient_cbs[profile - 1]->get_codec_type(direction);
   if (codec_type == CodecIndex::CODEC_INDEX_SOURCE_APTX_ADAPTIVE_LE ||
       codec_type == CodecIndex::CODEC_INDEX_SOURCE_APTX_ADAPTIVE_R4) {
-    frame_duration =
-        ((pclient_cbs[profile - 1]->get_min_sup_frame_dur(direction)) / 4) * 1000;
+    frame_duration = pclient_cbs[profile - 1]->get_frame_duration(direction);
     LOG(ERROR) << __func__ << ": fetch frame duration: "
                << frame_duration << ", from leaudio_configs.xml";
   }
@@ -566,7 +565,7 @@ LeAudioConfiguration fetch_offload_audio_config(int profile, int direction) {
     if (codec_type == CodecIndex::CODEC_INDEX_SOURCE_APTX_ADAPTIVE_LE ||
         codec_type == CodecIndex::CODEC_INDEX_SOURCE_APTX_ADAPTIVE_R4) {
       le_vendor_config.codecSpecificData[5] = 0x11; // Aptx Adaptive Type
-      le_vendor_config.codecSpecificData[8] = pclient_cbs[profile - 1]->get_min_sup_frame_dur(direction);
+      le_vendor_config.codecSpecificData[8] = frame_duration;
       le_vendor_config.codecSpecificData[9] = pclient_cbs[profile - 1]->get_feature_map(direction);
       if (codec_type == CodecIndex::CODEC_INDEX_SOURCE_APTX_ADAPTIVE_R4) {
         le_vendor_config.vendorCodecType = VendorCodecType::APTX_ADAPTIVE_R4;

@@ -1855,8 +1855,13 @@ void btm_ble_link_encrypted(const RawAddress& bd_addr, uint8_t encr_enable) {
   gatt_notify_enc_cmpl(p_dev_rec->ble.pseudo_addr);
 
   /* Update EATT support */
-  if (encr_enable)
+  if (encr_enable) {
     gatt_update_eatt_support(p_dev_rec->ble.pseudo_addr);
+    tGATT_TCB* p_tcb = gatt_find_tcb_by_addr(p_dev_rec->ble.pseudo_addr, BT_TRANSPORT_LE);
+    if (p_tcb && p_tcb->is_eatt_supported && !p_tcb->apps_needing_eatt.empty()) {
+      gatt_establish_eatt_connect(p_tcb, 1);
+    }
+  }
 }
 
 /*******************************************************************************

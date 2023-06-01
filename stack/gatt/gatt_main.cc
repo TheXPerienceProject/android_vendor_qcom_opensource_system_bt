@@ -1369,6 +1369,8 @@ static void gatt_l2cif_eatt_connect_cfm_cback(RawAddress &p_bd_addr,
       gatt_eatt_bcb_in_progress_dealloc(p_bd_addr);
       p_tcb->apps_needing_eatt.clear();
       p_tcb->is_eatt_supported = false;
+      gatt_move_att_ops_from_eatt_bcb(p_tcb);
+      gatt_eatt_bcb_dealloc(p_tcb, L2CAP_ATT_CID);
 
       gatt_send_conn_cb_after_enc_failure(p_tcb);
       return;
@@ -1401,6 +1403,8 @@ static void gatt_l2cif_eatt_connect_cfm_cback(RawAddress &p_bd_addr,
     if (gatt_num_eatt_bcbs(p_tcb) == 0) {
       VLOG(1) << " First EATT conn attempt rejected, set eatt as not supported";
       p_tcb->is_eatt_supported = false;
+      gatt_move_att_ops_from_eatt_bcb(p_tcb);
+      gatt_eatt_bcb_dealloc(p_tcb, L2CAP_ATT_CID);
     }
   }
 
@@ -1714,7 +1718,8 @@ void gatt_data_process(tGATT_TCB& tcb, uint16_t lcid, BT_HDR* p_buf) {
   STREAM_TO_UINT8(op_code, p);
 
   LOG(INFO) << __func__ << " op_code = " << +op_code
-                        << ", msg_len = " << +msg_len;
+                        << ", msg_len = " << +msg_len
+                        << ", lcid = " << +lcid;
 
   /* remove the two MSBs associated with sign write and write cmd */
   pseudo_op_code = op_code & (~GATT_WRITE_CMD_MASK);

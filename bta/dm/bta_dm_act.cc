@@ -2865,8 +2865,7 @@ static void bta_dm_rem_name_cback (const RawAddress& bd_addr, DEV_CLASS dc, BD_N
   /* If Discovery complete callback is pending to be given to upper layer when
    * cancel remote name request is called on cancelling discovery then cancel
    * the discovery_cb_alarm and give discovery complete callback to upper layer */
-  if (bta_dm_search_cb.disc_cmpl_cb_pending &&
-      bta_dm_search_cb.state == BTA_DM_SEARCH_IDLE) {
+  if (bta_dm_search_cb.disc_cmpl_cb_pending) {
     if (alarm_is_scheduled(bta_dm_search_cb.discovery_cb_alarm)) {
       APPL_TRACE_DEBUG("%s: RNR completed, cancel discovery_cb_alarm", __func__);
       alarm_free(bta_dm_search_cb.discovery_cb_alarm);

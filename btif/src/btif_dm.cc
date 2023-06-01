@@ -707,6 +707,7 @@ void bond_state_changed(bt_status_t status, const RawAddress& bd_addr,
       btif_store_adv_audio_pair_info(bd_addr);
     }else if(state == BT_BOND_STATE_NONE) {
      bta_dm_reset_adv_audio_pairing_info(bd_addr);
+     btif_storage_remove_bonded_device(&bd_addr);
    }
   }
 

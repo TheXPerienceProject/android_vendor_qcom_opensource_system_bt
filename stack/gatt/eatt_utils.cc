@@ -1457,3 +1457,32 @@ void gatt_send_conn_cb_after_enc_failure(tGATT_TCB* p_tcb) {
     }
   }
 }
+
+/*******************************************************************************
+ *
+ * Function         gatt_move_att_ops_from_eatt_bcb
+ *
+ * Description      The function moves ATT channel ops from EATT bcb to p_tcb
+ *
+ * Returns          void
+ *
+ ******************************************************************************/
+void gatt_move_att_ops_from_eatt_bcb(tGATT_TCB* p_tcb) {
+  tGATT_EBCB* p_eatt_bcb = NULL;
+
+  VLOG(1) << __func__;
+  p_eatt_bcb = gatt_find_eatt_bcb_by_cid(p_tcb, L2CAP_ATT_CID);
+  if (!p_eatt_bcb) {
+    VLOG(1) << __func__ << " p_eatt_bcb not available for ATT CID: ";
+    return;
+  }
+
+  p_tcb->payload_size = p_eatt_bcb->payload_size;
+  p_tcb->ind_ack_timer = p_eatt_bcb->ind_ack_timer;
+  p_tcb->conf_timer = p_eatt_bcb->conf_timer;
+  p_tcb->cl_cmd_q = p_eatt_bcb->cl_cmd_q;
+  p_tcb->pending_ind_q = p_eatt_bcb->pending_ind_q;
+  p_tcb->indicate_handle = p_eatt_bcb->indicate_handle;
+  p_tcb->sr_cmd = p_eatt_bcb->sr_cmd;
+  p_tcb->sr_cmd.multi_rsp_q = p_eatt_bcb->sr_cmd.multi_rsp_q;
+}
