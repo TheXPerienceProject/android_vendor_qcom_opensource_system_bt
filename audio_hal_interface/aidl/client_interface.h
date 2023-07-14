@@ -62,6 +62,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 #include "bluetooth_audio_port_impl.h"
 #include "osi/include/thread.h"
 #include "transport_instance.h"
+#include "osi/include/properties.h"
 
 #define BLUETOOTH_AUDIO_HAL_PROP_DISABLED \
   "persist.bluetooth.bluetooth_audio_hal.disabled"
@@ -153,7 +154,12 @@ class BluetoothAudioClientInterface {
   static inline const std::string kDefaultAudioProviderFactoryInterface =
       std::string(IBluetoothAudioProviderFactory::descriptor) + "/default";
       //std::string() + IBluetoothAudioProviderFactory::descriptor + "/default";
-
+  static inline const std::string kSystemAudioProviderFactoryInterface =
+      std::string() + IBluetoothAudioProviderFactory::descriptor + "/sysbta";
+  static inline const std::string audioProviderFactoryInterface() {
+   return osi_property_get_bool("persist.bluetooth.system_audio_hal.enabled", false)
+    ? kSystemAudioProviderFactoryInterface : kDefaultAudioProviderFactoryInterface;
+  }
 
  private:
   static inline bool aidl_available = true;

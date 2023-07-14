@@ -102,7 +102,7 @@ bool BluetoothAudioClientInterface::is_aidl_available() {
   LOG(WARNING) << __func__ << ": aidl_available: " << aidl_available;
   if (!aidl_available) return false;
   auto service = AServiceManager_checkService(
-                        kDefaultAudioProviderFactoryInterface.c_str());
+                        audioProviderFactoryInterface().c_str());
   aidl_available = (service != nullptr);
   LOG(WARNING) << __func__
                << ": updating aidl_available: " << aidl_available;
@@ -125,7 +125,7 @@ BluetoothAudioClientInterface::GetAudioCapabilities(SessionType session_type) {
   }
   auto provider_factory = IBluetoothAudioProviderFactory::fromBinder(
       ::ndk::SpAIBinder(AServiceManager_getService(
-          kDefaultAudioProviderFactoryInterface.c_str())));
+          audioProviderFactoryInterface().c_str())));
 
   if (provider_factory == nullptr) {
     LOG(ERROR) << __func__ << ": AIDL: can't get capability from unknown factory";
@@ -155,7 +155,7 @@ void BluetoothAudioClientInterface::FetchAudioProvider() {
   }
   auto provider_factory = IBluetoothAudioProviderFactory::fromBinder(
       ::ndk::SpAIBinder(AServiceManager_getService(
-          kDefaultAudioProviderFactoryInterface.c_str())));
+          audioProviderFactoryInterface().c_str())));
 
   if (provider_factory == nullptr) {
     LOG(ERROR) << __func__ << ": AIDL: can't get capability from unknown factory";
@@ -580,7 +580,7 @@ void BluetoothAudioClientInterface::RenewAudioProviderAndSession() {
   while(retries < 10) {
     LOG(INFO) << __func__ << "AIDL: sleep for 50ms for hal server to restart";
     auto service = AServiceManager_checkService(
-                          kDefaultAudioProviderFactoryInterface.c_str());
+                          audioProviderFactoryInterface().c_str());
     if(service != nullptr)
       break;
     usleep(50000);
