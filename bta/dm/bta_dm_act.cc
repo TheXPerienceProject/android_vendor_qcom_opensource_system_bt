@@ -5825,7 +5825,10 @@ static void bta_dm_gattc_callback(tBTA_GATTC_EVT event, tBTA_GATTC* p_data) {
       if (is_remote_support_adv_audio(p_data->close.remote_bda)) {
         if (is_gatt_srvc_disc_pending(p_data->close.remote_bda)) {
           bta_le_audio_service_search_failed(&p_data->close.remote_bda);
-        } else {
+        } else if (bta_adv_audio_role_disc_progress(p_data->close.remote_bda)) {
+          APPL_TRACE_ERROR("BTA_GATTC_CLOSE_EVT called during discovery under progress");
+          bta_le_audio_service_search_failed(&p_data->close.remote_bda);
+        }else {
           bta_dm_reset_adv_audio_dev_info(p_data->close.remote_bda);
         }
       }
