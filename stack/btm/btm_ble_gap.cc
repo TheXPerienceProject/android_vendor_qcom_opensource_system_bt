@@ -498,7 +498,6 @@ tBTM_STATUS BTM_BleObserve(bool start, uint8_t duration,
   std::vector<uint16_t> scan_window = {BTM_BLE_GAP_DISC_SCAN_WIN, BTM_BLE_GAP_DISC_SCAN_WIN};
 
   uint8_t scan_phy = !p_inq->scan_phy ? SCAN_PHY_LE_1M : p_inq->scan_phy;
-
   int phy_cnt = std::bitset<std::numeric_limits<uint8_t>::digits>(scan_phy).count();
   if(!p_inq->scan_interval.empty() && !p_inq->scan_window.empty()) {
   for(i=0; i< phy_cnt; i++) {
@@ -536,7 +535,9 @@ tBTM_STATUS BTM_BleObserve(bool start, uint8_t duration,
 /* assume observe always not using white list */
 #if (defined BLE_PRIVACY_SPT && BLE_PRIVACY_SPT == TRUE)
       /* enable resolving list */
-      btm_ble_enable_resolving_list_for_platform(BTM_BLE_RL_SCAN);
+      BTM_TRACE_DEBUG("%s Enabling resolving list with BTM_BLE_RL_SCAN ",
+                      __func__);
+      btm_ble_enable_resolving_list_for_scan(BTM_BLE_RL_SCAN);
 #endif
 
       btm_send_hci_set_scan_params(scan_phy, p_inq->scan_type,

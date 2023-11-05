@@ -1720,6 +1720,13 @@ static bool bta_dm_read_remote_device_name(const RawAddress& bd_addr,
   bta_dm_search_cb.peer_bdaddr = bd_addr;
   bta_dm_search_cb.peer_name[0] = 0;
 
+  if (!RawAddress::IsValidAddress(bd_addr.ToString()) ||
+     (bd_addr == RawAddress::kEmpty)) {
+      APPL_TRACE_DEBUG("%s: Not valid BD Address  %s ", __func__,
+                       bd_addr.ToString().c_str());
+      return false;
+  }
+
   btm_status =
       BTM_ReadRemoteDeviceName(bta_dm_search_cb.peer_bdaddr,
                                (tBTM_CMPL_CB*)bta_dm_remname_cback, transport);

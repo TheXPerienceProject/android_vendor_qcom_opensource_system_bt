@@ -2328,6 +2328,12 @@ static void btif_dm_upstreams_evt(uint16_t event, char* p_param) {
         btif_dm_SDP_interrupt_bd_addr = bd_addr;
         btif_dm_SDP_interrupt_transport = p_data->link_down.link_type;
 
+#ifdef ADV_AUDIO_FEATURE
+      if (is_remote_support_adv_audio(bd_addr)) {
+        BTIF_TRACE_WARNING("%s resetting adv audio pairing info ", __func__);
+        bta_dm_reset_adv_audio_pairing_info(bd_addr);
+      }
+#endif
         pairing_cb.sdp_attempts = 0;
         BTA_DmResetPairingflag(bd_addr);
         pairing_cb = {};
