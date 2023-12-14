@@ -22,6 +22,7 @@
  *
  ******************************************************************************/
 
+#include <algorithm>
 #include "bt_target.h"
 #include "bt_utils.h"
 #include "osi/include/osi.h"
@@ -224,38 +225,39 @@ static bool process_read_multi_rsp(tGATT_SR_CMD* p_cmd, tGATT_STATUS status,
         }
 
         if (p_rsp != NULL) {
-          total_len = (p_buf->len + p_rsp->attr_value.len);
+          total_len = p_buf->len;
           if (p_cmd->multi_req.is_variable_len) {
             total_len += 2;
           }
 
           if (total_len > mtu) {
-            /* just send the partial response for the overflow case */
-            len = p_rsp->attr_value.len - (total_len - mtu);
+            VLOG(1) << "Buffer space not enough for this data item, skipping";
+            break;
+          }
+
+          len = std::min((size_t) p_rsp->attr_value.len, (size_t)(mtu - total_len));
+
+          if (len == 0) {
+            VLOG(1) << "Buffer space not enough for this data item, skipping";
+            break;
+          }
+
+          if (len < p_rsp->attr_value.len) {
             is_overflow = true;
             VLOG(1) << StringPrintf(
                 "multi read overflow available len=%zu val_len=%d", len,
                 p_rsp->attr_value.len);
-          } else {
-            len = p_rsp->attr_value.len;
           }
 
           VLOG(1) << __func__ << " multi_req.is_variable_len: " << +p_cmd->multi_req.is_variable_len;
           if (p_cmd->multi_req.is_variable_len) {
-            UINT16_TO_STREAM(p, p_rsp->attr_value.len);
+            UINT16_TO_STREAM(p, (uint16_t) len);
             p_buf->len += 2;
           }
 
           if (p_rsp->attr_value.handle == p_cmd->multi_req.handles[ii]) {
-            // check for possible integer overflow
-            if (p_buf->len + len <= UINT16_MAX) {
-              memcpy(p, p_rsp->attr_value.value, len);
-              if (!is_overflow) p += len;
-              p_buf->len += len;
-            } else {
-              p_cmd->status = GATT_NOT_FOUND;
-              break;
-            }
+            ARRAY_TO_STREAM(p, p_rsp->attr_value.value, (uint16_t) len);
+            p_buf->len += (uint16_t) len;
           } else {
             p_cmd->status = GATT_NOT_FOUND;
             break;

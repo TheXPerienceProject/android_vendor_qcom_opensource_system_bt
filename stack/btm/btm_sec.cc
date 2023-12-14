@@ -5577,21 +5577,12 @@ extern tBTM_STATUS btm_sec_execute_procedure(tBTM_SEC_DEV_REC* p_dev_rec) {
  ******************************************************************************/
 static bool btm_sec_start_get_name(tBTM_SEC_DEV_REC* p_dev_rec) {
   uint8_t tempstate = p_dev_rec->sec_state;
-  RawAddress bd_addr;
+
   p_dev_rec->sec_state = BTM_SEC_STATE_GETTING_NAME;
-  bd_addr = p_dev_rec->bd_addr;
-  if (p_dev_rec->bd_addr == p_dev_rec->ble.identity_addr ){
-   if (!p_dev_rec->ble.pseudo_addr.IsEmpty()){
-     bd_addr = p_dev_rec->ble.pseudo_addr;
-     BTM_TRACE_EVENT("btm_sec_start_get_name, change addr %s to new %s",
-       p_dev_rec->bd_addr.ToString().c_str(),
-       p_dev_rec->ble.pseudo_addr.ToString().c_str());
-    }
-   }
-  BTM_TRACE_EVENT("btm_sec_start_get_name, bd_addr %s", bd_addr.ToString().c_str());
+
   /* 0 and NULL are as timeout and callback params because they are not used in
    * security get name case */
-  if ((btm_initiate_rem_name(bd_addr, BTM_RMT_NAME_SEC, 0, NULL)) !=
+  if ((btm_initiate_rem_name(p_dev_rec->bd_addr, BTM_RMT_NAME_SEC, 0, NULL)) !=
       BTM_CMD_STARTED) {
     p_dev_rec->sec_state = tempstate;
     return (false);
