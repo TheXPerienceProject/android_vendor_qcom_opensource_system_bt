@@ -224,7 +224,6 @@ typedef struct {
   tRFC_MCB* p_rfc_lcid_mcb[MAX_L2CAP_CHANNELS];
   bool peer_rx_disabled; /* If true peer sent FCOFF */
   uint8_t last_mux;      /* Last mux allocated */
-  uint8_t last_port;     /* Last port allocated */
 } tRFCOMM_CB;
 
 /* Main Control Block for the RFCOMM Layer (PORT and RFC) */

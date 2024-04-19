@@ -182,6 +182,8 @@ class IBluetoothTransportInstance_2_1 {
 
   virtual void StopRequest() = 0;
 
+  virtual void NotifyHalRestart() = 0;
+
   virtual bool GetPresentationPosition(uint64_t* remote_delay_report_ns,
                                        uint64_t* total_bytes_readed,
                                        timespec* data_position) = 0;

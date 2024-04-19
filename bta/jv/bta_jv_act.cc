@@ -2218,6 +2218,9 @@ static void bta_jv_pm_state_change(tBTA_JV_PM_CB* p_cb,
   switch (state) {
     case BTA_JV_CONN_OPEN:
       bta_sys_conn_open(BTA_ID_JV, p_cb->app_id, p_cb->peer_bd_addr);
+      // update as idle to enter into sniff mode if the link
+      // is idle for some time
+      bta_sys_idle(BTA_ID_JV, p_cb->app_id, p_cb->peer_bd_addr);
       break;
 
     case BTA_JV_CONN_CLOSE:

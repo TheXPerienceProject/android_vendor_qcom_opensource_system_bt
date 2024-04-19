@@ -777,6 +777,12 @@ void bond_state_changed(bt_status_t status, const RawAddress& bd_addr,
     }
   }
   if (state == BT_BOND_STATE_NONE) {
+      
+    if (btif_dm_SDP_interrupt && btif_dm_SDP_interrupt_bd_addr == bd_addr) {
+      btif_dm_SDP_interrupt = false;
+      btif_dm_SDP_interrupt_bd_addr = {};
+      btif_dm_SDP_interrupt_transport = BTA_TRANSPORT_UNKNOWN;
+    }
     // Update Pbap 1.2 entry, set rebonded to true
     update_pce_entry_after_cancelling_bonding(bd_addr);
     // Update Map 1.4 entry, set rebonded to true

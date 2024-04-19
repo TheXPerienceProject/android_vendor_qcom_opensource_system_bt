@@ -790,6 +790,7 @@ typedef struct {
   tSDP_DISCOVERY_DB* p_sdp_db;
   uint16_t state;
   RawAddress peer_bdaddr;
+  RawAddress adv_le_bdaddr;
   bool name_discover_done;
   BD_NAME peer_name;
   alarm_t* search_timer;

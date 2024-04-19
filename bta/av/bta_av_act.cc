@@ -112,6 +112,8 @@
 #define BTA_AV_RC_DISC_RETRY_DELAY_MS 3500
 #endif
 
+#define BTA_AV_RC_DISC_DELAY_MS 500
+
 struct blacklist_entry
 {
     int ver;
@@ -326,6 +328,10 @@ static void bta_av_rc_ctrl_cback(uint8_t handle, uint8_t event,
     msg_event = BTA_AV_AVRC_OPEN_EVT;
   } else if (event == AVRC_CLOSE_IND_EVT) {
     msg_event = BTA_AV_AVRC_CLOSE_EVT;
+    if (alarm_is_scheduled(bta_av_cb.rcb[handle].delay_rc_disc_timer)) {
+      APPL_TRACE_DEBUG("%s: cancel delay_rc_disc_timer ",__func__);
+      alarm_cancel(bta_av_cb.rcb[handle].delay_rc_disc_timer);
+    }
   } else if (event == AVRC_BROWSE_OPEN_IND_EVT) {
       if (result != 0 && (rc_handle != BTA_AV_RC_HANDLE_NONE)) {
         if (browse_conn_retry_count <= 1) {
@@ -1468,6 +1474,44 @@ void bta_av_stream_chg(tBTA_AV_SCB* p_scb, bool started) {
   }
 }
 
+static void bta_av_disconnect_rc(uint32_t index) {
+  uint8_t mask;
+  mask = BTA_AV_HNDL_TO_MSK(index);
+  tBTA_AV_CB* p_cb = &bta_av_cb;
+  for (int i = 0; i < BTA_AV_NUM_RCB; i++) {
+    APPL_TRACE_DEBUG("%s: conn_chg dn[%d]: %d, status=0x%x, shdl:%d, lidx:%d",
+                     __func__, i,
+                     bta_av_cb.rcb[i].handle, bta_av_cb.rcb[i].status,
+                     bta_av_cb.rcb[i].shdl, bta_av_cb.rcb[i].lidx);
+    if (bta_av_cb.rcb[i].shdl == index + 1) {
+      bta_av_del_rc(&bta_av_cb.rcb[i]);
+      int idx = active_device_priority_list_get_idx(bta_av_cb.rcb[i].peer_addr);
+      std::vector<RawAddress>::iterator it = active_device_priority_list.begin();
+      if (idx != -1) {
+        APPL_TRACE_WARNING("%s: Remove Addr: %s, (it + idx): %s", __func__,
+                                         bta_av_cb.rcb[i].peer_addr.ToString().c_str(),
+                                         (*(it + idx)).ToString().c_str());
+        active_device_priority_list.erase(it + idx);
+      }
+      /* since the connection is already down and info was removed, clean
+       * reference */
+      bta_av_cb.rcb[i].shdl = 0;
+      break;
+    }
+  }
+
+  if (p_cb->conn_audio == 0 && p_cb->conn_video == 0 && (p_cb->conn_lcb & ~mask) == 0) {
+    APPL_TRACE_WARNING("%s: No other AV connection up, close all RC",__func__);
+    bta_av_close_all_rc(p_cb);
+  }
+}
+
+static void bta_av_delay_rc_disc_timer_cback(void* data) {
+  uint32_t index = PTR_TO_UINT(data);
+  APPL_TRACE_WARNING("%s: index %d",__func__, index);
+  bta_av_disconnect_rc(index);
+}
+
 /*******************************************************************************
  *
  * Function         bta_av_conn_chg
@@ -1512,6 +1556,10 @@ void bta_av_conn_chg(tBTA_AV_DATA* p_data) {
         for (i = 0; i < BTA_AV_NUM_RCB; i++) {
           if (bta_av_cb.rcb[i].lidx == p_lcb->lidx) {
             bta_av_cb.rcb[i].shdl = index + 1;
+            if (alarm_is_scheduled(bta_av_cb.rcb[i].delay_rc_disc_timer)) {
+              APPL_TRACE_DEBUG("%s: cancel delay_rc_disc_timer",__func__);
+              alarm_cancel(bta_av_cb.rcb[i].delay_rc_disc_timer);
+            }
             APPL_TRACE_DEBUG(
                 "conn_chg up[%d]: %d, status=0x%x, shdl:%d, lidx:%d", i,
                 bta_av_cb.rcb[i].handle, bta_av_cb.rcb[i].status,
@@ -1614,31 +1662,27 @@ void bta_av_conn_chg(tBTA_AV_DATA* p_data) {
     }
 
     APPL_TRACE_DEBUG("%s: shdl:%d", __func__, index + 1);
-    for (i = 0; i < BTA_AV_NUM_RCB; i++) {
-      APPL_TRACE_DEBUG("%s: conn_chg dn[%d]: %d, status=0x%x, shdl:%d, lidx:%d",
-                       __func__, i,
-                       bta_av_cb.rcb[i].handle, bta_av_cb.rcb[i].status,
-                       bta_av_cb.rcb[i].shdl, bta_av_cb.rcb[i].lidx);
-      if (bta_av_cb.rcb[i].shdl == index + 1) {
-        bta_av_del_rc(&bta_av_cb.rcb[i]);
-        int idx = active_device_priority_list_get_idx(p_data->conn_chg.peer_addr);
-        std::vector<RawAddress>::iterator it = active_device_priority_list.begin();
-        if (idx != -1) {
-          APPL_TRACE_WARNING("%s: Remove Addr: %s, (it + idx): %s", __func__,
-                                           p_data->conn_chg.peer_addr.ToString().c_str(),
-                                           (*(it + idx)).ToString().c_str());
-          active_device_priority_list.erase(it + idx);
-        }
-        /* since the connection is already down and info was removed, clean
-         * reference */
-        bta_av_cb.rcb[i].shdl = 0;
-        break;
-      }
-    }
 
-    if (p_cb->conn_audio == 0 && p_cb->conn_video == 0 && (p_cb->conn_lcb & ~mask) == 0) {
-      APPL_TRACE_WARNING("%s: No other AV connection up, close all RC",__func__);
-      bta_av_close_all_rc(p_cb);
+    // check for split sink feature enabled, if so defer
+    // disconnecting the AVRCP connection for 500 msec
+    if(bta_av_cb.features & BTA_AV_FEAT_SPLIT_ENABLED) {
+      for (i = 0; i < BTA_AV_NUM_RCB; i++) {
+        APPL_TRACE_DEBUG("%s: conn_chg dn[%d]: %d, status=0x%x, shdl:%d, lidx:%d",
+                         __func__, i,
+                         bta_av_cb.rcb[i].handle, bta_av_cb.rcb[i].status,
+                         bta_av_cb.rcb[i].shdl, bta_av_cb.rcb[i].lidx);
+        if (bta_av_cb.rcb[i].shdl == index + 1) {
+          APPL_TRACE_DEBUG("%s: delay_rc_disc_timer set for [%d] msec",
+                           __func__, BTA_AV_RC_DISC_DELAY_MS);
+          alarm_set_on_mloop(bta_av_cb.rcb[i].delay_rc_disc_timer,
+                             BTA_AV_RC_DISC_DELAY_MS,
+                             bta_av_delay_rc_disc_timer_cback,
+                             UINT_TO_PTR(index));
+          break;
+        }
+      }
+    } else {
+       bta_av_disconnect_rc(index);
     }
 
     /* if the AVRCP is no longer listening, create the listening channel */
@@ -1695,6 +1739,11 @@ void bta_av_disable(tBTA_AV_CB* p_cb, UNUSED_ATTR tBTA_AV_DATA* p_data) {
   uint16_t xx;
 
   p_cb->disabling = true;
+
+  for (int i = 0; i < BTA_AV_NUM_RCB; i++) {
+    alarm_free(bta_av_cb.rcb[i].delay_rc_disc_timer);
+    bta_av_cb.rcb[i].delay_rc_disc_timer = NULL;
+  }
 
   bta_av_close_all_rc(p_cb);
 

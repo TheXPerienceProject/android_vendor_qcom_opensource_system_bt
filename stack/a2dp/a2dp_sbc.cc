@@ -174,6 +174,7 @@ tA2DP_STATUS A2DP_ParseInfoSbc(tA2DP_SBC_CIE* p_ie,
   uint8_t losc;
   uint8_t media_type;
   tA2DP_CODEC_TYPE codec_type;
+  char is_a2dp_pts_enable[PROPERTY_VALUE_MAX] = "false";
   LOG_DEBUG(LOG_TAG, "%s: is_capability: %d", __func__, is_capability);
 
   if (p_ie == NULL || p_codec_info == NULL)  {
@@ -229,6 +230,14 @@ tA2DP_STATUS A2DP_ParseInfoSbc(tA2DP_SBC_CIE* p_ie,
     return A2DP_BAD_MAX_BITPOOL;
   }
 
+  property_get("persist.vendor.bt.a2dp.pts_enable", is_a2dp_pts_enable, "false");
+  if(strncmp("false", is_a2dp_pts_enable, 4)) {
+    if((p_ie->samp_freq & A2DP_SBC_IE_SAMP_FREQ_44) == 0 &&
+        (p_ie->samp_freq & A2DP_SBC_IE_SAMP_FREQ_48) == 0) {
+      LOG_DEBUG(LOG_TAG, "%s: Unsupported Sampling frequency  :%x", __func__, p_ie->samp_freq);
+      return A2DP_NS_SAMP_FREQ;
+    }
+  }
   if (is_capability) return A2DP_SUCCESS;
 
   if (A2DP_BitsSet(p_ie->samp_freq) != A2DP_SET_ONE_BIT) {

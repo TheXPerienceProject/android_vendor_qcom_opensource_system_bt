@@ -877,18 +877,6 @@ tGATT_STATUS GATTC_ConfigureMTU(uint16_t conn_id, uint16_t mtu) {
     return GATT_ERROR;
   }
 
-  if (p_tcb->is_eatt_supported && p_reg->eatt_support) {
-    uint16_t cid = gatt_get_cid_by_conn_id(conn_id);
-    p_eatt_bcb = gatt_find_eatt_bcb_by_cid(p_tcb, cid);
-    if (p_eatt_bcb) {
-      cb_data.mtu = p_eatt_bcb->payload_size;
-      if (p_cmpl_cb) {
-        (*p_cmpl_cb)(conn_id, GATTC_OPTYPE_CONFIG, GATT_SUCCESS, &cb_data, 0);
-      }
-    }
-    return GATT_SUCCESS;
-  }
-
   if (gatt_is_clcb_allocated(conn_id)) {
     LOG(ERROR) << "GATT_BUSY conn_id = " << +conn_id;
     return GATT_BUSY;

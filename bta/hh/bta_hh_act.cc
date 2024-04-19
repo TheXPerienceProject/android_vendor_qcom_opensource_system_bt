@@ -495,14 +495,15 @@ void bta_hh_api_disc_act(tBTA_HH_DEV_CB* p_cb, tBTA_HH_DATA* p_data) {
   tHID_STATUS status;
 
 #if (BTA_HH_LE_INCLUDED == TRUE)
-  if (p_cb->is_le_device)
+  if ((p_data != NULL && BTM_UseLeLink(p_data->api_disc.bd_addr))) {
+    APPL_TRACE_WARNING("%s: LE HH link is connected ", __func__);
     bta_hh_le_api_disc_act(p_cb);
-  else
+  } else
 #endif
   {
     /* found an active connection */
-    disc_dat.handle =
-        p_data ? (uint8_t)p_data->hdr.layer_specific : p_cb->hid_handle;
+    disc_dat.handle = p_data ? (uint8_t)p_data->api_disc.hdr.layer_specific
+                             : p_cb->hid_handle;
     disc_dat.status = BTA_HH_ERR;
 
     status = HID_HostCloseDev(disc_dat.handle);
@@ -937,10 +938,10 @@ void bta_hh_close_act(tBTA_HH_DEV_CB* p_cb, tBTA_HH_DATA* p_data) {
  * Returns          void
  *
  ******************************************************************************/
-void bta_hh_get_dscp_act(tBTA_HH_DEV_CB* p_cb,
-                         UNUSED_ATTR tBTA_HH_DATA* p_data) {
+void bta_hh_get_dscp_act(tBTA_HH_DEV_CB* p_cb, tBTA_HH_DATA* p_data) {
 #if (BTA_HH_LE_INCLUDED == TRUE)
-  if (p_cb->is_le_device) {
+  if ((p_data != NULL && BTM_UseLeLink(p_data->api_get_dscp.bd_addr))) {
+    APPL_TRACE_WARNING("%s: LE HH link is connected ", __func__);
     bta_hh_le_get_dscp_act(p_cb);
   } else
 #endif

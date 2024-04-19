@@ -119,7 +119,7 @@ bool bta_hf_client_add_record(const char* p_service_name, uint8_t scn,
 
   /* add profile descriptor list */
   profile_uuid = UUID_SERVCLASS_HF_HANDSFREE;
-  version = HFP_VERSION_1_6;
+  version = HFP_VERSION_1_8;
 
   result &= SDP_AddProfileDescriptorList(sdp_handle, profile_uuid, version);
 

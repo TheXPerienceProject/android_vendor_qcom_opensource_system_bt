@@ -98,7 +98,8 @@ typedef enum {
   BTIF_AV_SINK_OFFLOAD_SETUP_COMPLETE_EVT,
   BTIF_AV_SINK_OFFLOAD_SEND_VSC_A2DP_START_EVT,
   BTIF_AV_SINK_OFFLOAD_SEND_VSC_A2DP_STOP_EVT,
-  BTIF_AV_SINK_OFFLOAD_SINK_LATENCY_EVT
+  BTIF_AV_SINK_OFFLOAD_SINK_LATENCY_EVT,
+  BTIF_AV_SINK_OFFLOAD_HAL_RESTART_EVT
 } btif_av_sm_event_t;
 
 /*******************************************************************************

@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <cutils/properties.h>
 
 #include "bt_utils.h"
 #include "bta_api.h"
@@ -34,7 +35,8 @@
 static const char* bta_hf_client_evt_str(uint16_t event);
 static const char* bta_hf_client_state_str(uint8_t state);
 void bta_hf_client_cb_init(tBTA_HF_CLIENT_CB* client_cb, uint16_t handle);
-
+int hf_client_max_device;
+char values[PROPERTY_VALUE_MAX];
 /* state machine states */
 enum {
   BTA_HF_CLIENT_INIT_ST,
@@ -277,7 +279,7 @@ void bta_hf_client_cb_arr_init() {
   memset(&bta_hf_client_cb_arr, 0, sizeof(tBTA_HF_CLIENT_CB_ARR));
 
   // reset the handles and make the CBs non-allocated
-  for (int i = 0; i < HF_CLIENT_MAX_DEVICES; i++) {
+  for (int i = 0; i < hf_client_max_device; i++) {
     // Allocate the handles in increasing order of indices
     bta_hf_client_cb_init(&(bta_hf_client_cb_arr.cb[i]), i);
     bta_hf_client_cb_arr.cb[i].handle = BTA_HF_CLIENT_CB_FIRST_HANDLE + i;
@@ -409,6 +411,14 @@ tBTA_STATUS bta_hf_client_api_enable(tBTA_HF_CLIENT_CBACK* p_cback,
                                      tBTA_SEC sec_mask,
                                      tBTA_HF_CLIENT_FEAT features,
                                      const char* p_service_name) {
+  if (property_get("ro.board.platform", values, " ") &&
+         strcmp(values, "neo") == 0) {
+    hf_client_max_device = HF_CLIENT_MAX_DEVICES_NEO;
+    APPL_TRACE_WARNING("%s: maximum number of connectable devices for\
+       neo target is %d", __func__,hf_client_max_device);
+  } else {
+    hf_client_max_device = HF_CLIENT_MAX_DEVICES;
+  }
   /* If already registered then return error */
   if (bta_sys_is_register(BTA_ID_HS)) {
     APPL_TRACE_ERROR("BTA HF Client is already enabled, ignoring ...");
@@ -458,10 +468,10 @@ tBTA_STATUS bta_hf_client_api_enable(tBTA_HF_CLIENT_CBACK* p_cback,
  *
  ******************************************************************************/
 tBTA_HF_CLIENT_CB* bta_hf_client_find_cb_by_handle(uint16_t handle) {
-  // Handles are limited from 1 through HF_CLIENT_MAX_DEVICES
-  if (handle < 1 || handle > HF_CLIENT_MAX_DEVICES) {
+  // Handles are limited from 1 through hf_client_max_device
+  if (handle < 1 || handle > hf_client_max_device) {
     APPL_TRACE_ERROR("%s: handle out of range (%d, %d) %d", __func__, 1,
-                     HF_CLIENT_MAX_DEVICES, handle);
+                     hf_client_max_device, handle);
     return NULL;
   }
 
@@ -488,7 +498,7 @@ tBTA_HF_CLIENT_CB* bta_hf_client_find_cb_by_handle(uint16_t handle) {
  *
  ******************************************************************************/
 tBTA_HF_CLIENT_CB* bta_hf_client_find_cb_by_bda(const RawAddress& peer_addr) {
-  for (int i = 0; i < HF_CLIENT_MAX_DEVICES; i++) {
+  for (int i = 0; i < hf_client_max_device; i++) {
     // Check if the associated index is allocated and that BD ADDR matches
     tBTA_HF_CLIENT_CB* client_cb = &bta_hf_client_cb_arr.cb[i];
     if (client_cb->is_allocated && peer_addr == client_cb->peer_addr) {
@@ -516,7 +526,7 @@ tBTA_HF_CLIENT_CB* bta_hf_client_find_cb_by_bda(const RawAddress& peer_addr) {
  *
  ******************************************************************************/
 tBTA_HF_CLIENT_CB* bta_hf_client_find_cb_by_rfc_handle(uint16_t handle) {
-  for (int i = 0; i < HF_CLIENT_MAX_DEVICES; i++) {
+  for (int i = 0; i < hf_client_max_device; i++) {
     tBTA_HF_CLIENT_CB* client_cb = &bta_hf_client_cb_arr.cb[i];
     bool is_allocated = client_cb->is_allocated;
     uint16_t conn_handle = client_cb->conn_handle;
@@ -550,7 +560,7 @@ tBTA_HF_CLIENT_CB* bta_hf_client_find_cb_by_rfc_handle(uint16_t handle) {
  *
  ******************************************************************************/
 tBTA_HF_CLIENT_CB* bta_hf_client_find_cb_by_sco_handle(uint16_t handle) {
-  for (int i = 0; i < HF_CLIENT_MAX_DEVICES; i++) {
+  for (int i = 0; i < hf_client_max_device; i++) {
     tBTA_HF_CLIENT_CB* client_cb = &bta_hf_client_cb_arr.cb[i];
     if (client_cb->is_allocated && client_cb->sco_idx == handle) {
       return client_cb;
@@ -571,7 +581,7 @@ tBTA_HF_CLIENT_CB* bta_hf_client_find_cb_by_sco_handle(uint16_t handle) {
  *                  bd_addr: Address of the device for which this block is
  *                  being created. Single device can only have one block.
  *                  p_handle: OUT variable to store the outcome of allocate. If
- *                  allocate failed then value is not valid
+ *                  allocate failed then values is not valid
  *
  *
  * Returns          true if the creation of p_handle succeeded, false otherwise
@@ -587,7 +597,7 @@ bool bta_hf_client_allocate_handle(const RawAddress& bd_addr,
   }
   /* Check that we do not have a request to for same device in the control
    * blocks */
-  for (int i = 0; i < HF_CLIENT_MAX_DEVICES; i++) {
+  for (int i = 0; i < hf_client_max_device; i++) {
     tBTA_HF_CLIENT_CB* client_cb = &bta_hf_client_cb_arr.cb[i];
     if (client_cb->is_allocated) {
       APPL_TRACE_WARNING("%s: control block already used index %d", __func__,
@@ -656,7 +666,7 @@ void bta_hf_client_api_disable() {
   bta_hf_client_close_server();
 
   /* reinit the control block */
-  for (int i = 0; i < HF_CLIENT_MAX_DEVICES; i++) {
+  for (int i = 0; i < hf_client_max_device; i++) {
     if (bta_hf_client_cb_arr.cb[i].is_allocated) {
       bta_hf_client_cb_init(&(bta_hf_client_cb_arr.cb[i]), i);
     }
@@ -921,7 +931,7 @@ void bta_hf_client_dump_statistics(int fd) {
   dprintf(fd, "\nBluetooth HF Client BTA Statistics\n");
 
   // We dump statistics for all control blocks
-  for (int i = 0; i < HF_CLIENT_MAX_DEVICES; i++) {
+  for (int i = 0; i < hf_client_max_device; i++) {
     tBTA_HF_CLIENT_CB* client_cb = &bta_hf_client_cb_arr.cb[i];
     if (!client_cb->is_allocated) {
       // Skip the blocks which are not allocated

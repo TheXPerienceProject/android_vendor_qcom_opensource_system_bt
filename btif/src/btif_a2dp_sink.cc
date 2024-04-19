@@ -790,8 +790,6 @@ bool btif_a2dp_sink_start_session(const RawAddress& peer_address) {
       fixed_queue_flush(btif_a2dp_sink_cb.rx_audio_queue, osi_free);
     }
   }
-  //TODO sjella
-  //btif_a2dp_update_sink_latency_change();
   return true;
 }
 
@@ -874,8 +872,13 @@ void btif_a2dp_sink_process_request(tA2DP_CTRL_CMD cmd) {
       break;
     }
     case A2DP_CTRL_UPDATE_SINK_LATENCY: {
-
       btif_dispatch_sm_event(BTIF_AV_SINK_OFFLOAD_SINK_LATENCY_EVT, NULL, 0);
+      status = A2DP_CTRL_ACK_SUCCESS;
+      break;
+    }
+
+    case A2DP_CTRL_NOTIFY_HAL_RESTART: {
+      btif_dispatch_sm_event(BTIF_AV_SINK_OFFLOAD_HAL_RESTART_EVT, NULL, 0);
       status = A2DP_CTRL_ACK_SUCCESS;
       break;
     }

@@ -82,6 +82,7 @@ extern void btif_a2dp_source_encoder_init(void);
 
 extern uint8_t active_codec_info[AVDT_CODEC_SIZE];
 #define AAC_SAMPLE_SIZE  1024
+#define MAX_MTU_SIZE 990
 #define AAC_LATM_HEADER  12
 
 namespace {
@@ -291,6 +292,14 @@ class A2dpTransport_2_1 : public ::bluetooth::audio::IBluetoothTransportInstance
       return;
     }
     ProcessRequest(A2DP_CTRL_CMD_STOP);
+  }
+
+  void NotifyHalRestart() override {
+    if(!IsActvie()) {
+      LOG(WARNING) << __func__ << ": Not active";
+      return;
+    }
+    ProcessRequest(A2DP_CTRL_NOTIFY_HAL_RESTART);
   }
 
   bool GetPresentationPosition(uint64_t* remote_delay_report,
@@ -1826,7 +1835,7 @@ bool a2dp_get_selected_hal_codec_config_2_1(CodecConfiguration_2_1* codec_config
   if(profile == A2DP_SINK) {
     codec_config->isScramblingEnabled = btif_av_is_scrambling_enabled();
     bta_av_co_get_peer_params(&peer_param);
-    peer_param.peer_mtu = 1024;
+    peer_param.peer_mtu = MAX_MTU_SIZE;
     codec_type = A2DP_GetCodecType((const uint8_t*)active_codec_info);
     LOG(INFO) << __func__ << ": codec_type" << loghex(codec_type);
     // Obtain the MTU

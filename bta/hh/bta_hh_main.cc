@@ -307,14 +307,26 @@ void bta_hh_sm_execute(tBTA_HH_DEV_CB* p_cb, uint16_t event,
           cback_event = BTA_HH_CLOSE_EVT;
 
           cback_data.dev_status.status = BTA_HH_ERR_HDL;
-          cback_data.dev_status.handle =
-              (uint8_t)p_data->api_sndcmd.hdr.layer_specific;
+          if (p_data != NULL) {
+            cback_data.dev_status.handle =
+                (uint8_t)p_data->api_disc.hdr.layer_specific;
+
+            APPL_TRACE_WARNING("device handle: [%d]",
+                               cback_data.dev_status.handle);
+            osi_free_and_reset((void**)&p_data);
+          }
           break;
 
         case BTA_HH_API_GET_DSCP_EVT:
           cback_event = BTA_HH_CLOSE_EVT;
           cback_data.dev_status.status = BTA_HH_ERR_HDL;
-          cback_data.dev_status.handle = (uint8_t)p_data->hdr.layer_specific;
+          if (p_data != NULL) {
+            cback_data.dev_status.handle =
+                (uint8_t)p_data->api_get_dscp.hdr.layer_specific;
+            APPL_TRACE_WARNING("device handle: [%d]",
+                               cback_data.dev_status.handle);
+            osi_free_and_reset((void**)&p_data);
+          }
           break;
 
         default:

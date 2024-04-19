@@ -957,10 +957,18 @@ tBTM_STATUS BTM_StartInquiry(tBTM_INQ_PARMS* p_inqparms,
 tBTM_STATUS BTM_ReadRemoteDeviceName(const RawAddress& remote_bda,
                                      tBTM_CMPL_CB* p_cb,
                                      tBT_TRANSPORT transport) {
+  tBTM_SEC_DEV_REC* p_dev_rec = btm_find_dev(remote_bda);
   VLOG(1) << __func__ << ": bd addr " << remote_bda;
   /* Use LE transport when LE is the only available option */
   if (transport == BT_TRANSPORT_LE) {
     return btm_ble_read_remote_name(remote_bda, p_cb);
+  }
+
+
+  if (p_dev_rec  &&  p_dev_rec->sec_state == BTM_SEC_STATE_GETTING_NAME) {
+    BTM_TRACE_WARNING ("Remote name request initiated by security: BDA: %s",
+                       remote_bda.ToString().c_str());
+    return (BTM_BUSY);
   }
   /* Use classic transport for BR/EDR and Dual Mode devices */
   return btm_initiate_rem_name(remote_bda, BTM_RMT_NAME_EXT,

@@ -28,6 +28,8 @@
 #define HFP_VERSION_1_1 0x0101
 #define HFP_VERSION_1_5 0x0105
 #define HFP_VERSION_1_6 0x0106
+#define HFP_VERSION_1_7 0x0107
+#define HFP_VERSION_1_8 0x0108
 
 /* RFCOMM MTU SIZE */
 #define BTA_HF_CLIENT_MTU 256
@@ -43,6 +45,7 @@
 
 /* Maximum number of HF devices supported simultaneously */
 #define HF_CLIENT_MAX_DEVICES 10
+#define HF_CLIENT_MAX_DEVICES_NEO 2
 
 enum {
   /* these events are handled by the state machine */

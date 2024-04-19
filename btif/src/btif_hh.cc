@@ -576,7 +576,7 @@ bt_status_t btif_hh_virtual_unplug(const RawAddress* bd_addr) {
     BTIF_TRACE_ERROR("%s: Virtual unplug not suported, disconnecting device: %s",
                      __func__, bd_str);
     p_dev->local_vup = true;
-    BTA_HhClose(p_dev->dev_handle);
+    BTA_HhClose(p_dev->dev_handle, *bd_addr);
     return BT_STATUS_SUCCESS;
   } else {
     BTIF_TRACE_ERROR("%s: Error, device %s not opened, status = %d", __func__,
@@ -668,7 +668,7 @@ void btif_hh_disconnect(RawAddress* bd_addr) {
   btif_hh_device_t* p_dev;
   p_dev = btif_hh_find_connected_dev_by_bda(*bd_addr);
   if (p_dev != NULL) {
-    BTA_HhClose(p_dev->dev_handle);
+    BTA_HhClose(p_dev->dev_handle, *bd_addr);
   } else
     BTIF_TRACE_DEBUG("%s-- Error: device not connected:", __func__);
 }
@@ -841,7 +841,7 @@ static void btif_hh_upstreams_evt(uint16_t event, char* p_param) {
           // The connect request must come from device side and exceeded the
           // connected
           // HID device number.
-          BTA_HhClose(p_data->conn.handle);
+          BTA_HhClose(p_data->conn.handle, p_data->conn.bda);
           HAL_CBACK(bt_hh_callbacks, connection_state_cb,
                     (RawAddress*)&p_data->conn.bda,
                     BTHH_CONN_STATE_DISCONNECTED);
@@ -852,7 +852,7 @@ static void btif_hh_upstreams_evt(uint16_t event, char* p_param) {
           // remove the connection  and then try again to reconnect from the
           // mouse side to recover
           btif_hh_cb.status = (BTIF_HH_STATUS)BTIF_HH_DEV_DISCONNECTED;
-          BTA_HhClose(p_data->conn.handle);
+          BTA_HhClose(p_data->conn.handle, p_data->conn.bda);
         } else {
           BTIF_TRACE_WARNING(
               "BTA_HH_OPEN_EVT: Found device...Getting dscp info for handle "
@@ -864,7 +864,7 @@ static void btif_hh_upstreams_evt(uint16_t event, char* p_param) {
           if (check_cod(&p_data->conn.bda, COD_HID_KEYBOARD) ||
               check_cod(&p_data->conn.bda, COD_HID_COMBO))
             BTA_HhSetIdle(p_data->conn.handle, 0);
-          BTA_HhGetDscpInfo(p_data->conn.handle);
+          BTA_HhGetDscpInfo(p_data->conn.handle, p_data->conn.bda);
           p_dev->dev_status = BTHH_CONN_STATE_CONNECTED;
           HAL_CBACK(bt_hh_callbacks, connection_state_cb, &(p_dev->bd_addr),
                     p_dev->dev_status);

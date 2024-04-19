@@ -235,6 +235,7 @@ enum {
   AVDT_SCB_HDL_START_CMD,
   AVDT_SCB_HDL_START_RSP,
   AVDT_SCB_HDL_PENDING_START_RSP,
+  AVDT_SCB_HDL_PENDING_START_REJ,
   AVDT_SCB_HDL_SUSPEND_CMD,
   AVDT_SCB_HDL_SUSPEND_RSP,
   AVDT_SCB_HDL_PENDING_SUSPEND_RSP,
@@ -301,6 +302,7 @@ enum {
   AVDT_SCB_API_SETCONFIG_REJ_EVT,
   AVDT_SCB_API_OPEN_RSP_EVT,
   AVDT_SCB_API_PENDING_START_RSP_EVT,
+  AVDT_SCB_API_PENDING_START_REJ_EVT,
   AVDT_SCB_API_PENDING_SUSPEND_RSP_EVT,
   AVDT_SCB_API_CLOSE_RSP_EVT,
   AVDT_SCB_API_RECONFIG_RSP_EVT,
@@ -588,6 +590,7 @@ extern void avdt_ccb_snd_getcap_rsp(tAVDT_CCB* p_ccb, tAVDT_CCB_EVT* p_data);
 extern void avdt_ccb_snd_start_cmd(tAVDT_CCB* p_ccb, tAVDT_CCB_EVT* p_data);
 extern void avdt_ccb_snd_start_rsp(tAVDT_CCB* p_ccb, tAVDT_CCB_EVT* p_data);
 extern void avdt_ccb_snd_pending_start_rsp(tAVDT_CCB* p_ccb, tAVDT_CCB_EVT* p_data);
+extern void avdt_scb_hdl_pending_start_rej(tAVDT_SCB* p_scb, tAVDT_SCB_EVT* p_data);
 extern void avdt_ccb_snd_pending_suspend_rsp(tAVDT_CCB* p_ccb, tAVDT_CCB_EVT* p_data);
 extern void avdt_ccb_snd_suspend_cmd(tAVDT_CCB* p_ccb, tAVDT_CCB_EVT* p_data);
 extern void avdt_ccb_snd_suspend_rsp(tAVDT_CCB* p_ccb, tAVDT_CCB_EVT* p_data);

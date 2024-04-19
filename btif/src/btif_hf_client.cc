@@ -49,6 +49,7 @@
 
 #include <hardware/bluetooth.h>
 #include <hardware/bt_hf_client.h>
+#include <cutils/properties.h>
 
 #include "bt_target.h"
 #include "bt_utils.h"
@@ -75,10 +76,12 @@
 #define BTIF_HF_CLIENT_FEATURES                                                \
   (BTA_HF_CLIENT_FEAT_ECNR | BTA_HF_CLIENT_FEAT_3WAY |                         \
    BTA_HF_CLIENT_FEAT_CLI | BTA_HF_CLIENT_FEAT_VREC | BTA_HF_CLIENT_FEAT_VOL | \
-   BTA_HF_CLIENT_FEAT_ECS | BTA_HF_CLIENT_FEAT_ECC | BTA_HF_CLIENT_FEAT_CODEC)
+   BTA_HF_CLIENT_FEAT_ECS | BTA_HF_CLIENT_FEAT_ECC | BTA_HF_CLIENT_FEAT_CODEC | \
+   BTA_HF_CLIENT_FEAT_S4)
 #endif
 
-
+int hf_client_max_devices;
+char value[PROPERTY_VALUE_MAX];
 static const char* dump_hf_client_conn_state(uint16_t event) {
   switch (event) {
     CASE_RETURN_STR(BTHF_CLIENT_CONNECTION_STATE_DISCONNECTED)
@@ -105,6 +108,7 @@ typedef struct {
 
 /* Max devices supported by BTIF (useful to match the value in BTA) */
 #define HF_CLIENT_MAX_DEVICES 10
+#define HF_CLIENT_MAX_DEVICES_NEO 2
 typedef struct {
   btif_hf_client_cb_t cb[HF_CLIENT_MAX_DEVICES];
 } btif_hf_client_cb_arr_t;
@@ -207,7 +211,7 @@ bool is_connected(const btif_hf_client_cb_t* cb) {
  ******************************************************************************/
 btif_hf_client_cb_t* btif_hf_client_get_cb_by_handle(uint16_t handle) {
   BTIF_TRACE_DEBUG("%s: cb by handle %d", __func__, handle);
-  for (int i = 0; i < HF_CLIENT_MAX_DEVICES; i++) {
+  for (int i = 0; i < hf_client_max_devices; i++) {
     // Block is valid only if it is allocated i.e. state is not DISCONNECTED
     if (btif_hf_client_cb_arr.cb[i].state !=
             BTHF_CLIENT_CONNECTION_STATE_DISCONNECTED &&
@@ -231,7 +235,7 @@ btif_hf_client_cb_t* btif_hf_client_get_cb_by_handle(uint16_t handle) {
 btif_hf_client_cb_t* btif_hf_client_get_cb_by_bda(const RawAddress& bd_addr) {
   VLOG(1) << __func__ << " incoming addr " << bd_addr;
 
-  for (int i = 0; i < HF_CLIENT_MAX_DEVICES; i++) {
+  for (int i = 0; i < hf_client_max_devices; i++) {
     // Block is valid only if it is allocated i.e. state is not DISCONNECTED
     if (btif_hf_client_cb_arr.cb[i].state !=
             BTHF_CLIENT_CONNECTION_STATE_DISCONNECTED &&
@@ -253,7 +257,7 @@ btif_hf_client_cb_t* btif_hf_client_get_cb_by_bda(const RawAddress& bd_addr) {
  *
  ******************************************************************************/
 btif_hf_client_cb_t* btif_hf_client_allocate_cb() {
-  for (int i = 0; i < HF_CLIENT_MAX_DEVICES; i++) {
+  for (int i = 0; i < hf_client_max_devices; i++) {
     btif_hf_client_cb_t* cb = &btif_hf_client_cb_arr.cb[i];
     if (cb->state == BTHF_CLIENT_CONNECTION_STATE_DISCONNECTED) {
       return cb;
@@ -279,6 +283,14 @@ btif_hf_client_cb_t* btif_hf_client_allocate_cb() {
  *
  ******************************************************************************/
 static bt_status_t init(bthf_client_callbacks_t* callbacks) {
+  if (property_get("ro.board.platform", value, " ") &&
+       strcmp(value, "neo") == 0) {
+    hf_client_max_devices = HF_CLIENT_MAX_DEVICES_NEO;
+    BTIF_TRACE_WARNING("%s: maximum number of connectable devices for\
+    neo target is %d", __func__,hf_client_max_devices);
+  } else {
+    hf_client_max_devices = HF_CLIENT_MAX_DEVICES;
+  }
   BTIF_TRACE_EVENT("%s", __func__);
 
   bt_hf_client_callbacks = callbacks;

@@ -768,12 +768,19 @@ size_t BluetoothAudioClientInterface::WriteAudioData(uint8_t* p_buf,
 void BluetoothAudioClientInterface::RenewAudioProviderAndSession() {
   // NOTE: must be invoked on the same thread where this
   // BluetoothAudioClientInterface is running
-  std::unique_lock<std::mutex> guard(*external_mutex_);
-  provider_ = nullptr;
-  provider_2_1_ = nullptr;
-  usleep(500000); //sleep for 0.5sec for hal server to restart
-  session_started_ = false;
-  StartSession();
+  {
+    std::unique_lock<std::mutex> guard(*external_mutex_);
+    provider_ = nullptr;
+    provider_2_1_ = nullptr;
+    usleep(500000); //sleep for 0.5sec for hal server to restart
+    session_started_ = false;
+    StartSession();
+  }
+
+  if(sink_2_1_) {
+    LOG(ERROR) << __func__ << ": BluetoothAudioHal notify HAL restart to stack";
+    sink_2_1_->NotifyHalRestart();
+  }
 }
 
 }  // namespace audio

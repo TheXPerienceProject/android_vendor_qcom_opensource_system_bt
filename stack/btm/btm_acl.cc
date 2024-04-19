@@ -2935,9 +2935,20 @@ tBTM_STATUS btm_remove_acl(const RawAddress& bd_addr, tBT_TRANSPORT transport) {
   } else /* otherwise can disconnect right away */
 #endif
   {
+    if (p_dev_rec) {
+      BTM_TRACE_DEBUG("btm_remove_acl: transport = %d, sec_state= %d", transport,p_dev_rec->sec_state );
+    }
     if (hci_handle != 0xFFFF && p_dev_rec &&
-        p_dev_rec->sec_state != BTM_SEC_STATE_DISCONNECTING) {
-      btsnd_hcic_disconnect(hci_handle, HCI_ERR_PEER_USER);
+       (p_dev_rec->sec_state != BTM_SEC_STATE_DISCONNECTING_BOTH)) {
+      if ((transport == BT_TRANSPORT_LE) &&
+         (p_dev_rec->sec_state != BTM_SEC_STATE_DISCONNECTING_BLE)) {
+        btsnd_hcic_disconnect(hci_handle, HCI_ERR_PEER_USER);
+      } else if((transport == BT_TRANSPORT_BR_EDR) &&
+                (p_dev_rec->sec_state != BTM_SEC_STATE_DISCONNECTING)) {
+        btsnd_hcic_disconnect(hci_handle, HCI_ERR_PEER_USER);
+      } else {
+        status = BTM_UNKNOWN_ADDR;
+      }
     } else {
       status = BTM_UNKNOWN_ADDR;
     }

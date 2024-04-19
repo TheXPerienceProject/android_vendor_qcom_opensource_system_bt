@@ -311,8 +311,10 @@ void avdt_ccb_hdl_discover_cmd(tAVDT_CCB* p_ccb, tAVDT_CCB_EVT* p_data) {
     /* If this ccb, has done setconf and is doing discover again
      * we should show SEP for which setconfig was done earlier
      * This is done for IOP with some remotes */
+    // make this fix applicable only source use case
   for (i = 0; i < AVDT_NUM_SEPS; i++, p_scb++) {
-    if((p_ccb != NULL) && (p_scb->p_ccb != NULL) && (p_scb->p_ccb == p_ccb)) {
+    if((p_ccb != NULL) && (p_scb->p_ccb != NULL) && (p_scb->p_ccb == p_ccb)
+        && !p_scb->cs.is_split_enabled) {
       AVDT_TRACE_EVENT(" CCB already tied to SCB[%d] ",i);
       /* copy sep info */
       sep_info[p_data->msg.discover_rsp.num_seps].in_use = p_scb->in_use;

@@ -279,8 +279,11 @@ static void bta_av_api_enable(tBTA_AV_DATA* p_data) {
   /* initialize control block */
   memset(&bta_av_cb, 0, sizeof(tBTA_AV_CB));
 
-  for (int i = 0; i < BTA_AV_NUM_RCB; i++)
+  for (int i = 0; i < BTA_AV_NUM_RCB; i++) {
     bta_av_cb.rcb[i].handle = BTA_AV_RC_HANDLE_NONE;
+    bta_av_cb.rcb[i].delay_rc_disc_timer =
+      alarm_new("bta_av.delay_rc_disc_timer");
+  }
 
   bta_av_cb.rc_acp_handle = BTA_AV_RC_HANDLE_NONE;
 
@@ -634,6 +637,7 @@ static void bta_av_api_register(tBTA_AV_DATA* p_data) {
     }
 
     p_scb->suspend_sup = true;
+    p_scb->strm_close_in_progress = false;
     p_scb->recfg_sup = true;
     p_scb->skip_sdp = false;
 

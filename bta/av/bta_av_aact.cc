@@ -129,6 +129,7 @@ extern tBTIF_A2DP_SOURCE_VSC btif_a2dp_src_vsc;
 extern void btif_media_send_reset_vendor_state();
 extern bool btif_device_in_sink_role();
 
+static void bta_av_proc_deferred_config_ind_evt(tBTA_AV_STR_MSG *p_msg);
 static void bta_av_st_rc_timer(tBTA_AV_SCB* p_scb,
                                UNUSED_ATTR tBTA_AV_DATA* p_data);
 
@@ -600,6 +601,18 @@ static void bta_av_proc_stream_evt(uint8_t handle, const RawAddress* bd_addr,
            * SST is at INIT state, change it to INCOMING state to handle the
            * signalling
            * from the 2nd SEP. */
+          if (p_scb->strm_close_in_progress && is_split_enabled()) {
+            APPL_TRACE_VERBOSE("%s():strm_close_in_progress ", __func__);
+            // defer processing the config indication if stream close
+            // is progress , process it after stream close
+            memcpy(&p_msg->cfg, p_data->config_ind.p_cfg, sizeof(tAVDT_CFG));
+            p_msg->handle = handle;
+            p_msg->avdt_event = event;
+            p_msg->scb_index  = index;
+            do_in_bta_thread(FROM_HERE, base::Bind(&bta_av_proc_deferred_config_ind_evt, p_msg));
+            return;
+          }
+
           if ((bd_addr != NULL) &&
               (bta_av_find_lcb(*bd_addr, BTA_AV_LCB_FIND) != NULL) &&
               (bta_av_is_scb_init(p_scb))) {
@@ -666,6 +679,10 @@ static void bta_av_proc_stream_evt(uint8_t handle, const RawAddress* bd_addr,
       p_msg->hdr.event = bta_av_stream_evt_fail[event];
     }
 
+    if (event == AVDT_CLOSE_IND_EVT) {
+      p_scb->strm_close_in_progress = true;
+    }
+
     p_msg->initiator = false;
     if (event == AVDT_SUSPEND_CFM_EVT) p_msg->initiator = true;
 
@@ -682,6 +699,14 @@ static void bta_av_proc_stream_evt(uint8_t handle, const RawAddress* bd_addr,
   } else if (!p_data) {
     APPL_TRACE_ERROR("%s: p_data is null", __func__);
   }
+}
+
+static void bta_av_proc_deferred_config_ind_evt(tBTA_AV_STR_MSG *p_msg) {
+  APPL_TRACE_VERBOSE("%s: ", __func__);
+  p_msg->msg.config_ind.p_cfg = &p_msg->cfg;
+  bta_av_proc_stream_evt(p_msg->handle, & p_msg->bd_addr,
+                         p_msg->avdt_event, &p_msg->msg, p_msg->scb_index);
+  osi_free(p_msg);
 }
 
 /*******************************************************************************
@@ -2470,6 +2495,7 @@ void bta_av_setconfig_rej(tBTA_AV_SCB* p_scb, tBTA_AV_DATA* p_data) {
   APPL_TRACE_DEBUG("%s: is_pts_enable: %s", __func__, is_pts_enable);
   if (!strncmp("true", is_pts_enable, 4)) {
     error_code = p_data->ci_setconfig.err_code;
+    APPL_TRACE_DEBUG("%s set config rejected error : 0x%x",__func__,error_code);
   } else {
     error_code = AVDT_ERR_UNSUP_CFG;
   }
@@ -2718,8 +2744,8 @@ void bta_av_sink_offload_start_req(tBTA_AV_SCB *p_scb, tBTA_AV_DATA *p_data)
     mtu = bta_av_chk_mtu(p_scb, p_scb->stream_mtu);
     offload_sink_start.stream_handle = 0;//stream handle is 0 always
     offload_sink_start.connection_handle = acl_hdl;
-    offload_sink_start.l2cap_mtu = (mtu < p_scb->stream_mtu) ? mtu : p_scb->stream_mtu;
-    offload_sink_start.l2cap_mtu = BTA_AV_MAX_A2DP_MTU;
+    //offload_sink_start.l2cap_mtu = (mtu < p_scb->stream_mtu) ? mtu : p_scb->stream_mtu;
+    offload_sink_start.l2cap_mtu = BTA_AVK_MAX_A2DP_MTU;
     offload_sink_start.lcid = p_scb->l2c_cid;
     offload_sink_start.codec_id = codec_type;
     offload_sink_start.cp_enable = 0x0;
@@ -3436,6 +3462,8 @@ void bta_av_str_closed(tBTA_AV_SCB* p_scb, tBTA_AV_DATA* p_data) {
   tBTA_AV data;
   tBTA_AV_EVT event;
   uint8_t policy = HCI_ENABLE_SNIFF_MODE;
+
+  p_scb->strm_close_in_progress = false;
 
   APPL_TRACE_WARNING(
       "%s: peer_addr=%s open_status=%d chnl=%d hndl=%d co_started=%d", __func__,

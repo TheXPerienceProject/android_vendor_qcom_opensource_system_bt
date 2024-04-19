@@ -121,6 +121,16 @@ typedef struct {
   tBTA_HH_PROTO_MODE mode;
 } tBTA_HH_API_CONN;
 
+typedef struct {
+  BT_HDR hdr;
+  RawAddress bd_addr;
+} tBTA_HH_API_DISC;
+
+typedef struct {
+  BT_HDR hdr;
+  RawAddress bd_addr;
+} tBTA_HH_API_GET_DSCP;
+
 /* internal event data from BTE HID callback */
 typedef struct {
   BT_HDR hdr;
@@ -159,6 +169,8 @@ typedef union {
   BT_HDR hdr;
   tBTA_HH_API_ENABLE api_enable;
   tBTA_HH_API_CONN api_conn;
+  tBTA_HH_API_DISC api_disc;
+  tBTA_HH_API_GET_DSCP api_get_dscp;
   tBTA_HH_CMD_DATA api_sndcmd;
   tBTA_HH_CBACK_DATA hid_cback;
   tBTA_HH_STATUS status;

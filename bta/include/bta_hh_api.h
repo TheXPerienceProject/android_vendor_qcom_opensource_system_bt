@@ -365,7 +365,7 @@ extern void BTA_HhOpen(const RawAddress& dev_bda, tBTA_HH_PROTO_MODE mode,
  * Returns          void
  *
  ******************************************************************************/
-extern void BTA_HhClose(uint8_t dev_handle);
+extern void BTA_HhClose(uint8_t dev_handle, const RawAddress& dev_bda);
 
 /*******************************************************************************
  *
@@ -488,7 +488,7 @@ extern void BTA_HhSendData(uint8_t dev_handle, const RawAddress& dev_bda,
  * Returns          void
  *
  ******************************************************************************/
-extern void BTA_HhGetDscpInfo(uint8_t dev_handle);
+extern void BTA_HhGetDscpInfo(uint8_t dev_handle, const RawAddress& dev_bda);
 
 /*******************************************************************************
  * Function         BTA_HhAddDev

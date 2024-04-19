@@ -62,29 +62,26 @@ static const tPORT_STATE default_port_pars = {
  ******************************************************************************/
 tPORT* port_allocate_port(uint8_t dlci, const RawAddress& bd_addr) {
   tPORT* p_port = &rfc_cb.port.port[0];
-  uint8_t xx, yy;
+  uint8_t xx;
 
-  for (xx = 0, yy = rfc_cb.rfc.last_port + 1; xx < MAX_RFC_PORTS; xx++, yy++) {
-    if (yy >= MAX_RFC_PORTS) yy = 0;
-
-    p_port = &rfc_cb.port.port[yy];
+  for (xx = 0; xx < MAX_RFC_PORTS; xx++) {
+    p_port = &rfc_cb.port.port[xx];
     if (!p_port->in_use) {
       memset(p_port, 0, sizeof(tPORT));
 
       p_port->in_use = true;
-      p_port->inx = yy + 1;
+      p_port->inx = xx + 1;
 
       /* During the open set default state for the port connection */
       port_set_defaults(p_port);
 
       p_port->rfc.port_timer = alarm_new("rfcomm_port.port_timer");
-      rfc_cb.rfc.last_port = yy;
 
       p_port->dlci = dlci;
       p_port->bd_addr = bd_addr;
 
-      RFCOMM_TRACE_DEBUG("rfc_cb.port.port[%d]:%p allocated, last_port:%d", yy,
-                         p_port, rfc_cb.rfc.last_port);
+      RFCOMM_TRACE_DEBUG("rfc_cb.port.port[%d]:%p allocated, port_indx:%d", xx,
+                         p_port, p_port->inx);
       VLOG(1) << __func__ << ": bd_addr:" << bd_addr;
       return (p_port);
     }

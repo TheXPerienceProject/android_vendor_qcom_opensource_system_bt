@@ -5818,22 +5818,33 @@ void bta_dm_proc_open_evt(tBTA_GATTC_OPEN* p_data) {
  ******************************************************************************/
 static void bta_dm_gattc_callback(tBTA_GATTC_EVT event, tBTA_GATTC* p_data) {
   APPL_TRACE_DEBUG("bta_dm_gattc_callback event = %d", event);
-
+  bool proc_open_evt = true;
   switch (event) {
     case BTA_GATTC_OPEN_EVT:
 #ifdef ADV_AUDIO_FEATURE
       if (is_remote_support_adv_audio(bta_dm_search_cb.peer_bdaddr)) {
+        bta_dm_search_cb.adv_le_bdaddr = bta_dm_search_cb.peer_bdaddr;
         bta_dm_set_adv_audio_dev_info(&p_data->open);
+        uint8_t sec_flag = 0;
+        BTM_GetSecurityFlagsByTransport(p_data->open.remote_bda, &sec_flag, BT_TRANSPORT_LE);
+        APPL_TRACE_DEBUG(" sec_flag = 0x%x ", sec_flag);
+        if (sec_flag & BTM_SEC_FLAG_ENCRYPTED) {
+          /* if link has been encrypted */
+         APPL_TRACE_DEBUG(" bta_dm_gattc_callback link has been encrypted for device: %s ",
+         p_data->open.remote_bda.ToString().c_str());
+         proc_open_evt = false;
+        }
       }
 #endif
       //TODO reset the discovery parameters before triggering it open evt
-      bta_dm_proc_open_evt(&p_data->open);
+      if (proc_open_evt)
+        bta_dm_proc_open_evt(&p_data->open);
       break;
 
     case BTA_GATTC_SEARCH_RES_EVT:
 #ifdef ADV_AUDIO_FEATURE
-      if (is_remote_support_adv_audio(bta_dm_search_cb.peer_bdaddr)) {
-        bta_add_adv_audio_uuid(bta_dm_search_cb.peer_bdaddr,
+      if (is_remote_support_adv_audio(bta_dm_search_cb.adv_le_bdaddr)) {
+        bta_add_adv_audio_uuid(bta_dm_search_cb.adv_le_bdaddr,
                            p_data->srvc_res.service_uuid);
       }
 #endif
@@ -5846,22 +5857,22 @@ static void bta_dm_gattc_callback(tBTA_GATTC_EVT event, tBTA_GATTC* p_data) {
                                   p_data->search_cmpl.status);
 #ifdef ADV_AUDIO_FEATURE
         if (p_data->search_cmpl.status == 0) {
-          if (is_remote_support_adv_audio(bta_dm_search_cb.peer_bdaddr)) {
-            bta_dm_reset_adv_audio_gatt_disc_prog(bta_dm_search_cb.peer_bdaddr);
-            bta_get_adv_audio_role(bta_dm_search_cb.peer_bdaddr,
+          if (is_remote_support_adv_audio(bta_dm_search_cb.adv_le_bdaddr)) {
+            bta_dm_reset_adv_audio_gatt_disc_prog(bta_dm_search_cb.adv_le_bdaddr);
+            bta_get_adv_audio_role(bta_dm_search_cb.adv_le_bdaddr,
                 p_data->search_cmpl.conn_id,
                 p_data->search_cmpl.status);
           }
-          if (is_adv_audio_group_supported(bta_dm_search_cb.peer_bdaddr,
+          if (is_adv_audio_group_supported(bta_dm_search_cb.adv_le_bdaddr,
                p_data->search_cmpl.conn_id)) {
             bta_find_adv_audio_group_instance(p_data->search_cmpl.conn_id,
-                p_data->search_cmpl.status, bta_dm_search_cb.peer_bdaddr);
+                p_data->search_cmpl.status, bta_dm_search_cb.adv_le_bdaddr);
           }
         } else {
           APPL_TRACE_DEBUG("%s Discovery Failure ", __func__);
-          if (is_remote_support_adv_audio(bta_dm_search_cb.peer_bdaddr))
-            bta_dm_reset_adv_audio_gatt_disc_prog(bta_dm_search_cb.peer_bdaddr);
-            bta_le_audio_service_search_failed(&bta_dm_search_cb.peer_bdaddr);
+          if (is_remote_support_adv_audio(bta_dm_search_cb.adv_le_bdaddr))
+            bta_dm_reset_adv_audio_gatt_disc_prog(bta_dm_search_cb.adv_le_bdaddr);
+            bta_le_audio_service_search_failed(&bta_dm_search_cb.adv_le_bdaddr);
         }
 #endif
       }
@@ -5871,6 +5882,7 @@ static void bta_dm_gattc_callback(tBTA_GATTC_EVT event, tBTA_GATTC* p_data) {
       APPL_TRACE_DEBUG("BTA_GATTC_CLOSE_EVT reason = %d,"
         "p_data conn_id %d, search conn_id %d", p_data->close.reason,
         p_data->close.conn_id,bta_dm_search_cb.conn_id);
+      bta_dm_search_cb.adv_le_bdaddr = RawAddress::kEmpty;
 
       if(p_data->close.conn_id == bta_dm_search_cb.conn_id)
           bta_dm_search_cb.conn_id = GATT_INVALID_CONN_ID;

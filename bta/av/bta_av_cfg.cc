@@ -175,7 +175,7 @@ const tBTA_AV_CFG bta_avk_cfg = {
     BTA_AVK_RC_SUPF_CT,    /* AVRCP controller categories */
     BTA_AVK_RC_SUPF_TG,    /* AVRCP target categories */
     672,                   /* AVDTP signaling channel MTU at L2CAP */
-    BTA_AV_MAX_A2DP_MTU,   /* AVDTP audio transport channel MTU at L2CAP
+    BTA_AVK_MAX_A2DP_MTU,   /* AVDTP audio transport channel MTU at L2CAP
                               */
     bta_av_audio_flush_to, /* AVDTP audio transport channel flush
                               timeout */
