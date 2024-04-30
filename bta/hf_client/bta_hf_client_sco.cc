@@ -38,6 +38,9 @@ enum {
   BTA_HF_CLIENT_SCO_CONN_CLOSE_E, /* SCO closed */
 };
 
+extern bool bta_av_is_any_sink_stream_started();
+extern bool is_split_enabled();
+
 /*******************************************************************************
  *
  * Function         bta_hf_client_remove_sco
@@ -152,6 +155,7 @@ static void bta_hf_client_sco_conn_rsp(tBTA_HF_CLIENT_CB* client_cb,
 static void bta_hf_client_esco_connreq_cback(tBTM_ESCO_EVT event,
                                              tBTM_ESCO_EVT_DATA* p_data) {
   APPL_TRACE_DEBUG("%s: %d", __func__, event);
+  enh_esco_params_t resp;
 
   tBTA_HF_CLIENT_CB* client_cb =
       bta_hf_client_find_cb_by_sco_handle(p_data->conn_evt.sco_inx);
@@ -165,7 +169,14 @@ static void bta_hf_client_esco_connreq_cback(tBTM_ESCO_EVT event,
     return;
   }
 
-  bta_hf_client_sco_conn_rsp(client_cb, &p_data->conn_evt);
+  if(bta_av_is_any_sink_stream_started() &&  is_split_enabled()) {
+    APPL_TRACE_DEBUG("Reject SCO as A2dp sink stream is active");
+    BTM_EScoConnRsp(p_data->conn_evt.sco_inx, HCI_ERR_HOST_REJECT_DEVICE,
+                    &resp);
+    return;
+  } else {
+    bta_hf_client_sco_conn_rsp(client_cb, &p_data->conn_evt);
+  }
 
   client_cb->sco_state = BTA_HF_CLIENT_SCO_OPENING_ST;
 }

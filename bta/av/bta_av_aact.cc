@@ -679,7 +679,7 @@ static void bta_av_proc_stream_evt(uint8_t handle, const RawAddress* bd_addr,
       p_msg->hdr.event = bta_av_stream_evt_fail[event];
     }
 
-    if (event == AVDT_CLOSE_IND_EVT) {
+    if (event == AVDT_CLOSE_IND_EVT && p_scb->state == BTA_AV_OPEN_SST) {
       p_scb->strm_close_in_progress = true;
     }
 
@@ -1132,6 +1132,8 @@ void bta_av_do_disc_a2dp(tBTA_AV_SCB* p_scb, tBTA_AV_DATA* p_data) {
   APPL_TRACE_DEBUG("%s: is_pts_enable: %s", __func__, is_pts_enable);
   if (!strncmp("true", is_pts_enable, 4)) {
     APPL_TRACE_DEBUG("%s: Don't do a2dp discovery for PTS, return", __func__);
+    /* store peer addr to scb */
+    bta_av_save_addr(p_scb, p_data->api_open.bd_addr);
     return;
   }
 
@@ -1340,6 +1342,7 @@ void bta_av_cleanup(tBTA_AV_SCB* p_scb, UNUSED_ATTR tBTA_AV_DATA* p_data) {
   p_scb->num_disc_snks = 0;
   p_scb->offload_supported = false;
   p_scb->offload_started = false;
+  p_scb->sink_offload_started = false;
   p_scb->vendor_start = false;
   alarm_cancel(p_scb->avrc_ct_timer);
 
@@ -2778,6 +2781,7 @@ void bta_av_sink_offload_start_req(tBTA_AV_SCB *p_scb, tBTA_AV_DATA *p_data)
     UINT8_TO_STREAM(p_param,offload_sink_start.packet_header_size);
     UINT8_TO_STREAM(p_param,offload_sink_start.cp_enable);
     p_scb->sink_split_vsc_rsp_waiting = TRUE;
+    p_scb->sink_offload_started = false;
     BTM_VendorSpecificCommand(HCI_VSQC_CONTROLLER_A2DP_OPCODE,param_len,
                                param, sink_offload_vendor_callback);
     APPL_TRACE_DEBUG("%s Stream Handle = %d",__func__,offload_sink_start.stream_handle);
@@ -5006,9 +5010,16 @@ void sink_offload_vendor_callback(tBTM_VSC_CMPL *param)
     offload_rsp.status = status;
     offload_rsp.hndl = bta_av_cb.p_scb[index]->hndl;
     if(sub_opcode == VS_QCHCI_A2DP_SINK_START) {
+        if(status == HCI_SUCCESS) {
+           bta_av_cb.p_scb[index]->sink_offload_started = true;
+        }
         (*bta_av_cb.p_cback)(BTA_AV_SINK_OFFLOAD_START_RSP_EVT, (tBTA_AV *)&offload_rsp);
     }else if(sub_opcode == VS_QCHCI_A2DP_SINK_STOP) {
+        if(status == HCI_SUCCESS) {
+           bta_av_cb.p_scb[index]->sink_offload_started = false;
+        }
         (*bta_av_cb.p_cback)(BTA_AV_SINK_OFFLOAD_STOP_RSP_EVT, (tBTA_AV *)&offload_rsp);
+
     }else {
         APPL_TRACE_ERROR(" %s subopcode doesn't match", __func__);
     }

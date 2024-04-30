@@ -793,6 +793,7 @@ bool bta_av_is_scb_init(tBTA_AV_SCB* p_scb) {
 void bta_av_set_scb_sst_incoming(tBTA_AV_SCB* p_scb) {
   if (p_scb) {
     p_scb->state = BTA_AV_INCOMING_SST;
+    AVDT_UpdateServiceBusyState(false, p_scb->peer_addr);
   }
 }
 

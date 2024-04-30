@@ -1643,6 +1643,8 @@ void bta_av_conn_chg(tBTA_AV_DATA* p_data) {
     p_cb->conn_audio &= ~mask;
     p_cb->conn_video &= ~mask;
     if (p_scb) {
+      // clear the busy flag also
+      AVDT_UpdateServiceBusyState(false, p_scb->peer_addr);
       /* the stream is closed.
        * clear the peer address, so it would not mess up the AVRCP for the next
        * round of operation */

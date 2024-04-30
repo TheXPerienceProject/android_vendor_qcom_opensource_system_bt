@@ -65,6 +65,7 @@
 
 #include <base/logging.h>
 #include <string.h>
+#include <cutils/properties.h>
 
 #include "bt_target.h"
 #include "osi/include/log.h"
@@ -104,6 +105,7 @@
 #define BTA_AV_RS_TIME_VAL 1000
 #endif
 
+char board_prop[PROPERTY_VALUE_MAX];
 extern bool tws_state_supported;
 /* state machine states */
 enum { BTA_AV_INIT_ST, BTA_AV_OPEN_ST };
@@ -362,6 +364,31 @@ tBTA_AV_SCB* bta_av_addr_to_scb(const RawAddress& bd_addr) {
 
 /*******************************************************************************
  *
+ * Function         bta_av_is_any_stream_started
+ *
+ * Description      check if any a2dp sink offload stream is started
+ *
+ * Returns          bool
+ *
+ ******************************************************************************/
+
+bool bta_av_is_any_sink_stream_started() {
+  int xx;
+  bool is_streaming = false;
+
+  for (xx = 0; xx < BTA_AV_NUM_STRS; xx++) {
+    if ((bta_av_cb.p_scb[xx] != NULL) &&
+         bta_av_cb.p_scb[xx]->sink_offload_started == true) {
+      is_streaming = true;
+      break;
+    }
+  }
+  APPL_TRACE_DEBUG("bta_av_is_any_sink_stream_started %d",is_streaming);
+  return is_streaming;
+}
+
+/*******************************************************************************
+ *
  * Function         bta_av_hndl_to_scb
  *
  * Description      find the stream control block by the handle
@@ -536,6 +563,7 @@ static void bta_av_api_register(tBTA_AV_DATA* p_data) {
   tBTA_UTL_COD cod;
 
   memset(&cs, 0, sizeof(tAVDT_CS));
+  property_get("ro.board.platform", board_prop, " ");
 
   registr.status = BTA_AV_FAIL_RESOURCES;
   registr.app_id = p_data->api_reg.app_id;
@@ -602,6 +630,9 @@ static void bta_av_api_register(tBTA_AV_DATA* p_data) {
         uint16_t profile_version = AVRC_REV_1_0;
 
         if (profile_initialized == UUID_SERVCLASS_AUDIO_SOURCE) {
+          profile_version = AVRC_REV_1_6;
+        } else if (profile_initialized == UUID_SERVCLASS_AUDIO_SINK &&
+              strcmp(board_prop, "neo") == 0) {
           profile_version = AVRC_REV_1_6;
         } else if (profile_initialized == UUID_SERVCLASS_AUDIO_SINK) {
           // Initialize AVRCP1.4 to provide Absolute Volume control.

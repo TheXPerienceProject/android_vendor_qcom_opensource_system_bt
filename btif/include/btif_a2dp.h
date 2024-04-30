@@ -94,6 +94,8 @@ bool btif_a2dp_sink_start_session(const RawAddress& peer_address);
 
 bool btif_a2dp_sink_is_restart_session_needed();
 
+bool btif_a2dp_sink_end_session(const RawAddress& peer_address);
+
 bool btif_a2dp_sink_restart_session(const RawAddress& old_peer_address,
                                       const RawAddress& new_peer_address);
 

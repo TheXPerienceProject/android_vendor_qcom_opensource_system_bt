@@ -861,7 +861,8 @@ void BTA_AvkUpdateDelayReport(tBTA_AV_HNDL hndl, uint16_t sink_latency) {
     tBTA_AV_API_SINK_LATENCY* p_buf =
        (tBTA_AV_API_SINK_LATENCY*)osi_malloc(sizeof(tBTA_AV_API_SINK_LATENCY));
     p_buf->hdr.layer_specific = hndl;
-    p_buf->sink_latency = sink_latency;
+    // report delay is in 1/10 milliseconds
+    p_buf->sink_latency = sink_latency * 10;
     p_buf->hdr.event = BTA_AV_SINK_API_UPDATE_DELAY_REPORT_EVT;
     bta_sys_sendmsg(p_buf);
 }

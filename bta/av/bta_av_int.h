@@ -720,6 +720,7 @@ struct tBTA_AV_SCB {
   uint8_t channel_mode; //L:0 R:1 S:2 M:3
   uint8_t start_pending;
   bool offload_started;
+  bool sink_offload_started;
 //#endif
   bool vendor_start;
   tBTA_AV_CI_SETCONFIG *cache_setconfig;

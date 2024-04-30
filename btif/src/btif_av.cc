@@ -992,6 +992,11 @@ static void btif_av_collission_timer_timeout(void *data) {
       collision_detect[collision_index].conn_retry_count++;
       btif_queue_connect(UUID_SERVCLASS_AUDIO_SOURCE, target_bda, connect_int,
                     btif_max_av_clients);
+    } else if(bt_av_sink_callbacks != NULL) {
+      BTIF_TRACE_DEBUG("%s Starting A2dp connection for sink", __FUNCTION__);
+      collision_detect[collision_index].conn_retry_count++;
+      btif_queue_connect(UUID_SERVCLASS_AUDIO_SINK, target_bda, connect_int,
+                    btif_max_av_clients);
     } else {
       BTIF_TRACE_DEBUG("%s Aborting A2dp connection retry", __FUNCTION__);
     }
@@ -1243,6 +1248,13 @@ static bool btif_av_state_idle_handler(btif_sm_event_t event, void* p_data, int 
         BTIF_TRACE_EVENT("%s: reset Vendor flag A2DP state is IDLE", __func__);
         reconfig_a2dp = FALSE;
         btif_media_send_reset_vendor_state();
+      }
+
+      // close AIDL sessions in case of no device is connected
+      if(bt_split_a2dp_sink_enabled && (index < btif_max_av_clients)) {
+        if(!btif_av_get_num_connected_devices()) {
+          btif_a2dp_sink_end_session(ba_addr);
+        }
       }
       break;
 
@@ -1815,7 +1827,11 @@ static bool btif_av_state_opening_handler(btif_sm_event_t event, void* p_data,
          BTA_AvCloseRc(peer_handle);
        }
        BTA_AvClose(btif_av_cb[index].bta_handle);
-       btif_queue_advance();
+       if (bt_av_sink_callbacks != NULL) {
+         btif_queue_advance_by_uuid(UUID_SERVCLASS_AUDIO_SINK, &(btif_av_cb[index].peer_bda));
+       } else {
+         btif_queue_advance();
+       }
        btif_sm_change_state(btif_av_cb[index].sm_handle, BTIF_AV_STATE_IDLE);
        btif_report_connection_state_to_ba(BTAV_CONNECTION_STATE_DISCONNECTED);
        } break;
@@ -3289,14 +3305,20 @@ static bool btif_av_state_started_handler(btif_sm_event_t event, void* p_data,
         }
         FALLTHROUGH;
         // Fall through
-    case BTIF_AV_SINK_OFFLOAD_STOP_CFM_EVT:
+    case BTIF_AV_SINK_OFFLOAD_STOP_CFM_EVT: {
         // MM-Audio sessoin is stopped
+        bool is_suspend_needed = false;
+        if(bt_vendor_av_sink_callbacks &&
+             bt_vendor_av_sink_callbacks->is_suspend_needed_cb ){
+          is_suspend_needed = bt_vendor_av_sink_callbacks->
+                              is_suspend_needed_cb(&btif_av_cb[index].peer_bda);
+        }
         BTIF_TRACE_DEBUG(" %s vsc_command_status %d",__FUNCTION__,
                         btif_av_cb[index].vsc_command_status);
         start_pending_index = btif_av_get_latest_start_pending_idx();
         if(event == BTIF_AV_SINK_OFFLOAD_STOP_CFM_EVT &&
-           (start_pending_index != btif_max_av_clients &&
-          start_pending_index != index)) {
+           ((start_pending_index != btif_max_av_clients &&
+          start_pending_index != index) || is_suspend_needed)) {
           BTIF_TRACE_DEBUG(" %s send suspend for a2dp source ",__FUNCTION__);
           btif_av_cb[index].flags |= BTIF_AV_FLAG_LOCAL_SUSPEND_PENDING;
           BTA_AvStop(true, btif_av_cb[index].bta_handle);
@@ -3321,7 +3343,7 @@ static bool btif_av_state_started_handler(btif_sm_event_t event, void* p_data,
               // this should not happen actually in this state.
               break;
         }
-        break;
+    }   break;
 
     case BTIF_AV_SINK_OFFLOAD_SINK_LATENCY_EVT:
         BTA_AvkUpdateDelayReport(btif_av_cb[index].bta_handle,
@@ -3956,6 +3978,9 @@ static void btif_av_handle_event(uint16_t event, char* p_param) {
       if(index == btif_max_av_clients) {
         index = btif_av_get_latest_stream_device_idx();
       }
+      if(index == btif_max_av_clients) {
+        btif_a2dp_on_suspended(nullptr);
+      }
       BTIF_TRACE_EVENT("index = %d, max connections = %d", index, btif_max_av_clients);
       break;
     case BTIF_AV_SINK_OFFLOAD_HAL_RESTART_EVT:
@@ -3971,6 +3996,9 @@ static void btif_av_handle_event(uint16_t event, char* p_param) {
       index = btif_av_get_latest_start_pending_idx();
       if(index == btif_max_av_clients) {
         index = btif_av_get_interally_stopped_idx();
+      }
+      if(index == btif_max_av_clients) {
+        btif_a2dp_on_started(nullptr, false, 0);
       }
       BTIF_TRACE_EVENT("index = %d, max connections = %d", index, btif_max_av_clients);
       break;
@@ -4127,13 +4155,19 @@ static void btif_av_handle_event(uint16_t event, char* p_param) {
       break;
 
     case BTA_AV_COLL_DETECTED_EVT: {
+        char a2dp_sink_role[255] = "false";
+        osi_property_get("persist.vendor.service.bt.a2dp.sink", a2dp_sink_role, "false");
         BTIF_TRACE_WARNING("Collission evt received in btif");
         RawAddress bt_addr = p_bta_data->av_col_detected.peer_addr;
         uint16_t version = 0;
         bool a2dp_supported = btif_config_get_uint16(bt_addr.ToString().c_str(),
                               AVDTP_VERSION_CONFIG_KEY, (uint16_t*)&version);
+        BTIF_TRACE_WARNING("Collission evt received in btif %d", a2dp_supported);
         if (!a2dp_supported) {
           BTIF_TRACE_WARNING("Peer not have A2DP support, don't try Collision recovery, drop off");
+          if(strncmp("true", a2dp_sink_role, 4) == 0) {
+            btif_queue_advance_by_uuid(UUID_SERVCLASS_AUDIO_SINK, &bt_addr);
+          }
           return;
         }
         index = btif_av_idx_by_bdaddr(&bt_addr);
@@ -4142,7 +4176,12 @@ static void btif_av_handle_event(uint16_t event, char* p_param) {
           BTIF_TRACE_WARNING("Advnance collision queue, update disconnection to App and retry");
           btif_av_check_and_start_collission_timer(bt_addr);
           btif_report_connection_state(BTAV_CONNECTION_STATE_DISCONNECTED, &bt_addr);
-          btif_queue_advance_by_uuid(UUID_SERVCLASS_AUDIO_SOURCE, &bt_addr);
+          if (strncmp("true", a2dp_sink_role, 4) == 0){
+            BTIF_TRACE_WARNING("Remove Sink connection entry from queue");
+            btif_queue_advance_by_uuid(UUID_SERVCLASS_AUDIO_SINK, &bt_addr);
+          } else {
+            btif_queue_advance_by_uuid(UUID_SERVCLASS_AUDIO_SOURCE, &bt_addr);
+          }
         }
       }
       break;

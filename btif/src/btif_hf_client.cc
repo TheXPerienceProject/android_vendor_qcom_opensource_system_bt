@@ -881,7 +881,8 @@ static void btif_hf_client_upstreams_evt(uint16_t event, char* p_param) {
       if (cb->state == BTHF_CLIENT_CONNECTION_STATE_DISCONNECTED)
         cb->peer_bda = RawAddress::kAny;
 
-      if (p_data->open.status != BTA_HF_CLIENT_SUCCESS) btif_queue_advance();
+      if (p_data->open.status != BTA_HF_CLIENT_SUCCESS)
+        btif_queue_advance_by_uuid(UUID_SERVCLASS_HF_HANDSFREE, &cb->peer_bda);
       break;
 
     case BTA_HF_CLIENT_CONN_EVT:
@@ -898,7 +899,7 @@ static void btif_hf_client_upstreams_evt(uint16_t event, char* p_param) {
                   BTHF_CLIENT_IN_BAND_RINGTONE_PROVIDED);
       }
 
-      btif_queue_advance();
+      btif_queue_advance_by_uuid(UUID_SERVCLASS_HF_HANDSFREE, &cb->peer_bda);
       break;
 
     case BTA_HF_CLIENT_CLOSE_EVT:
@@ -908,7 +909,7 @@ static void btif_hf_client_upstreams_evt(uint16_t event, char* p_param) {
       cb->peer_bda = RawAddress::kAny;
       cb->peer_feat = 0;
       cb->chld_feat = 0;
-      btif_queue_advance();
+      btif_queue_advance_by_uuid(UUID_SERVCLASS_HF_HANDSFREE, &cb->peer_bda);
       break;
 
     case BTA_HF_CLIENT_IND_EVT:

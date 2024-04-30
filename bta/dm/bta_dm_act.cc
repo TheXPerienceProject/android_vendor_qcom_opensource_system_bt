@@ -1888,6 +1888,7 @@ static void bta_dm_store_profiles_version() {
   int i;
 
   const UINT16 servclass_uuids[] = {
+    UUID_SERVCLASS_AUDIO_SOURCE,
     UUID_SERVCLASS_AUDIO_SINK,
     UUID_SERVCLASS_HF_HANDSFREE,
     UUID_SERVCLASS_AV_REMOTE_CONTROL,
@@ -1897,6 +1898,7 @@ static void bta_dm_store_profiles_version() {
 
   const UINT16 btprofile_uuids[] = {
     UUID_SERVCLASS_ADV_AUDIO_DISTRIBUTION,
+    UUID_SERVCLASS_ADV_AUDIO_DISTRIBUTION,
     UUID_SERVCLASS_HF_HANDSFREE,
     UUID_SERVCLASS_AV_REMOTE_CONTROL,
     UUID_SERVCLASS_AV_REMOTE_CONTROL,
@@ -1904,6 +1906,7 @@ static void bta_dm_store_profiles_version() {
   };
 
   const char* profile_keys[] = {
+    A2DP_VERSION_CONFIG_KEY,
     A2DP_VERSION_CONFIG_KEY,
     HFP_VERSION_CONFIG_KEY,
     AV_REM_CTRL_VERSION_CONFIG_KEY,
@@ -1955,8 +1958,9 @@ static void bta_dm_store_profiles_version() {
           iot_profile_keys[i], profile_version, IOT_CONF_BYTE_NUM_2);
 #endif
     }
+    if (servclass_uuids[i] == UUID_SERVCLASS_AUDIO_SINK
+            || servclass_uuids[i] == UUID_SERVCLASS_AUDIO_SOURCE) {
 
-    if (servclass_uuids[i] == UUID_SERVCLASS_AUDIO_SINK) {
       /* get peer AVDTP version */
       if (SDP_FindProtocolListElemInRec(sdp_rec, UUID_PROTOCOL_AVDTP, &elem)) {
         avdtp_version = elem.params[0];
@@ -1964,6 +1968,7 @@ static void bta_dm_store_profiles_version() {
           if (btif_config_set_uint16(sdp_rec->remote_bd_addr.ToString().c_str(),
                               AVDTP_VERSION_CONFIG_KEY,
                               avdtp_version)) {
+            APPL_TRACE_DEBUG("Store avdtp_version");
             btif_config_save();
           } else {
             APPL_TRACE_WARNING("%s: Failed to store avdtp_version version for %s",

@@ -610,7 +610,7 @@ void avdt_ccb_snd_pending_start_rsp(tAVDT_CCB* p_ccb, tAVDT_CCB_EVT* p_data) {
   if (accepted == 0) {
     avdt_msg_send_rsp(p_ccb, AVDT_SIG_START, &msg);
   } else {
-    msg.hdr.err_code = AVDT_ERR_BAD_STATE;
+    msg.hdr.err_code = AVDT_ERR_NSC;
     //TODO:  Find right SEID
     avdt_msg_send_rej(p_ccb, AVDT_SIG_START, &msg);
   }
