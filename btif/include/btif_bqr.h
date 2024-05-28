@@ -14,6 +14,12 @@
  * limitations under the License.
  */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #ifndef BTIF_BQR_H_
 #define BTIF_BQR_H_
 
@@ -62,14 +68,36 @@ static constexpr uint32_t kQualityEventMaskApproachLsto = 0x00000002;
 static constexpr uint32_t kQualityEventMaskA2dpAudioChoppy = 0x00000004;
 static constexpr uint32_t kQualityEventMaskScoVoiceChoppy = 0x00000008;
 static constexpr uint32_t kQualityEventMaskRootInflammation = 0x00000010;
-static constexpr uint32_t kQualityEventMaskConnectFail = 0x1 << 7;
+static constexpr uint32_t kQualityEventMaskConnectFail = 0x1 << 7;;
 static constexpr uint32_t kQualityEventMaskDebugInfo = 0x00040000;
+static constexpr uint32_t kQualityEventMaskVendorSpecific = 0x00008000;
 static constexpr uint32_t kQualityEventMaskAll =
     kQualityEventMaskMonitorMode | kQualityEventMaskApproachLsto |
     kQualityEventMaskA2dpAudioChoppy | kQualityEventMaskScoVoiceChoppy |
     kQualityEventMaskRootInflammation | kQualityEventMaskConnectFail |
     kQualityEventMaskDebugInfo;
 static constexpr uint32_t kQualityEventMaskVsConnectFail = 0x80000000;
+static constexpr uint32_t kBqr5QualityEventMaskMonitorMode = 0x00000001;
+static constexpr uint32_t kBqr5QualityEventMaskApproachLsto = 0x00000002;
+static constexpr uint32_t kBqr5QualityEventMaskA2dpAudioChoppy = 0x00000004;
+static constexpr uint32_t kBqr5QualityEventMaskScoVoiceChoppy = 0x00000008;
+static constexpr uint32_t kBqr5QualityEventMaskRootInflammation = 0x00000010;
+static constexpr uint32_t kBqr5QualityEventMaskConnectFail = 0x00000080;
+static constexpr uint32_t kBqr5QualityEventMaskDebugInfo = 0x00040000;
+
+static constexpr uint32_t kBqr5QualityEventMaskAll =
+    kBqr5QualityEventMaskMonitorMode | kBqr5QualityEventMaskApproachLsto |
+    kBqr5QualityEventMaskA2dpAudioChoppy | kBqr5QualityEventMaskScoVoiceChoppy |
+    kBqr5QualityEventMaskRootInflammation | kBqr5QualityEventMaskConnectFail |
+    kBqr5QualityEventMaskDebugInfo | kQualityEventMaskVendorSpecific ;
+
+static constexpr uint32_t kVendorQualityEventMaskDiscMonitorMode = 0x00000001;
+static constexpr uint32_t kVendorQualityEventMaskMiscMonitorMode = 0x00000002;
+static constexpr uint32_t kVendorQualityEventMaskPowerLevelChange = 0x00000004;
+
+static constexpr uint32_t kVendorQualityEventMaskAll =
+    kVendorQualityEventMaskDiscMonitorMode | kVendorQualityEventMaskMiscMonitorMode |
+    kVendorQualityEventMaskPowerLevelChange;
 // Define the minimum time interval (in ms) of quality event reporting for the
 // selected quality event(s). Controller Firmware should not report the next
 // event within the defined time interval.
@@ -81,6 +109,7 @@ static constexpr uint8_t kBqrParamTotalLen = 55;
  * Specific Parameters.
  */
 static constexpr uint8_t kRootInflammationParamTotalLen = 3;
+static constexpr uint8_t kRootVendorSpecificParamsTotalLen = 2;
 // Warning criteria of the RSSI value.
 static constexpr int8_t kCriWarnRssi = -80;
 // Warning criteria of the unused AFH channel count.
@@ -90,6 +119,8 @@ static constexpr uint8_t kBqrEventQueueSize = 25;
 // The Property of BQR event mask configuration.
 static constexpr const char* kpPropertyEventMask =
     "persist.bluetooth.bqr.event_mask";
+static constexpr const char* kpPropertyVendorEventMask =
+    "persist.bluetooth.bqr_vndr.event_mask";
 // The Property of BQR minimum report interval configuration.
 static constexpr const char* kpPropertyMinReportIntervalMs =
     "persist.bluetooth.bqr.min_interval_ms";
@@ -124,8 +155,9 @@ enum BqrQualityReportId : uint8_t {
   QUALITY_REPORT_ID_SCO_VOICE_CHOPPY = 0x04,
   QUALITY_REPORT_ID_ROOT_INFLAMMATION = 0x05,
   QUALITY_REPORT_ID_CONNECT_FAIL = 0x08,
-
   QUALITY_REPORT_ID_VS_CONNECT_FAIL = 0x20,
+  QUALITY_REPORT_ID_VENDOR_SPECIFIC = 0x10,
+  //Vendor Specific Report IDs from 0x20
 };
 
 // BQR RIE vendor specific params IDs
@@ -171,7 +203,9 @@ enum BqrPacketType : uint8_t {
 typedef struct {
   BqrReportAction report_action;
   uint32_t quality_event_mask;
+  uint32_t vendor_quality_event_mask;
   uint16_t minimum_report_interval_ms;
+  bool is_qc_bqr5_supported;
 } BqrConfiguration;
 
 // BQR sub-event of Vendor Specific Event
@@ -206,7 +240,7 @@ class BqrVseSubEvt {
   uint8_t connection_role_ = 0;
   // Current Transmit Power Level for the connection. This value is the same as
   // the controller's response to the HCI_Read_Transmit_Power_Level HCI command.
-  uint8_t tx_power_level_ = 0;
+  int8_t tx_power_level_ = 0;
   // Received Signal Strength Indication (RSSI) value for the connection. This
   // value is an absolute receiver signal strength value.
   int8_t rssi_ = 0;
@@ -320,6 +354,8 @@ void AddBqrEventToQueue(uint8_t length, uint8_t* p_stream);
 //
 // @return a string representation of the parameter value
 std::string ParseVsBqrRieParams(BqrRieVsParamsId param_id, uint8_t** p_stream, int& pending_bytes);
+
+bool isQcBqr5Supported();
 
 }  // namespace bqr
 }  // namespace bluetooth

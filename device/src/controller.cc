@@ -777,7 +777,13 @@ static future_t* start_up(void) {
   if (HCI_QBCE_QLE_HCI_SUPPORTED(soc_add_on_features.as_array)) {
     BT_HDR* response;
     char qhs_iso[PROPERTY_VALUE_MAX] = "false";
-    property_get("persist.vendor.btstack.qhs_enable", qhs_iso, "false");
+    char* qhs_enabled_default = "false";
+    if (host_add_on_features_length > 0 &&
+        HCI_HOST_QHS_SUPPORTED(host_add_on_features.as_array) &&
+        HCI_HOST_LEA_UNICAST_SUPPORTED(host_add_on_features.as_array)) {
+      qhs_enabled_default = "true";
+    }
+    property_get("persist.vendor.btstack.qhs_enable", qhs_iso, qhs_enabled_default);
     if (!strncmp("true", qhs_iso, 4)) {
         response = AWAIT_COMMAND(packet_factory->make_qbce_set_qhs_host_mode(
                                  QHS_TRANSPORT_LE_ISO, QHS_HOST_MODE_HOST_AWARE));

@@ -14,6 +14,12 @@
  * limitations under the License.
  */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #include <stdio.h>
 #include "btif_bqr.h"
 #include "btif_dm.h"
@@ -24,6 +30,7 @@
 
 void btif_vendor_bqr_delivery_event(const RawAddress* bd_addr, const uint8_t* bqr_raw_data,
     uint32_t bqr_raw_data_len);
+extern bool btif_vendor_is_qc_bqr5_supported();
 
 namespace bluetooth {
 namespace bqr {
@@ -55,6 +62,7 @@ bool BqrVseSubEvt::IsEvtToBeParsed(uint8_t quality_report_id) {
     case QUALITY_REPORT_ID_A2DP_AUDIO_CHOPPY:
     case QUALITY_REPORT_ID_SCO_VOICE_CHOPPY:
     case QUALITY_REPORT_ID_ROOT_INFLAMMATION:
+    case QUALITY_REPORT_ID_VENDOR_SPECIFIC:
     case QUALITY_REPORT_ID_CONNECT_FAIL:
       return true;
     default:
@@ -85,35 +93,35 @@ bool BqrVseSubEvt::ParseBqrEvt(uint8_t length, uint8_t* p_param_buf) {
   if (quality_report_id_ == QUALITY_REPORT_ID_ROOT_INFLAMMATION) {
     return true;
   }
-  if (length < kBqrParamTotalLen) {
-    LOG(FATAL) << __func__
-               << ": Parameter total length: " << std::to_string(length)
-               << " is abnormal. It shall be not shorter than: "
-               << std::to_string(kBqrParamTotalLen);
-    return false;
+  if(!(btif_vendor_is_qc_bqr5_supported() &&
+         quality_report_id_ == QUALITY_REPORT_ID_VENDOR_SPECIFIC)){
+    if (length < kBqrParamTotalLen) {
+      LOG(FATAL) << __func__
+                 << ": Parameter total length: " << std::to_string(length)
+                 << " is abnormal. It shall be not shorter than: "
+                 << std::to_string(kBqrParamTotalLen);
+      return false;
+    } 
+
+    STREAM_TO_UINT8(packet_types_, p_param_buf);
+    STREAM_TO_UINT16(connection_handle_, p_param_buf);
+    STREAM_TO_UINT8(connection_role_, p_param_buf);
+    STREAM_TO_INT8(tx_power_level_, p_param_buf);
+    STREAM_TO_INT8(rssi_, p_param_buf);
+    STREAM_TO_UINT8(snr_, p_param_buf);
+    STREAM_TO_UINT8(unused_afh_channel_count_, p_param_buf);
+    STREAM_TO_UINT8(afh_select_unideal_channel_count_, p_param_buf);
+    STREAM_TO_UINT16(lsto_, p_param_buf);
+    STREAM_TO_UINT32(connection_piconet_clock_, p_param_buf);
+    STREAM_TO_UINT32(retransmission_count_, p_param_buf);
+    STREAM_TO_UINT32(no_rx_count_, p_param_buf);
+    STREAM_TO_UINT32(nak_count_, p_param_buf);
+    STREAM_TO_UINT32(last_tx_ack_timestamp_, p_param_buf);
+    STREAM_TO_UINT32(flow_off_count_, p_param_buf);
+    STREAM_TO_UINT32(last_flow_on_timestamp_, p_param_buf);
+    STREAM_TO_UINT32(buffer_overflow_bytes_, p_param_buf);
+    STREAM_TO_UINT32(buffer_underflow_bytes_, p_param_buf);
   }
-
-  STREAM_TO_UINT8(packet_types_, p_param_buf);
-  STREAM_TO_UINT16(connection_handle_, p_param_buf);
-  STREAM_TO_UINT8(connection_role_, p_param_buf);
-  STREAM_TO_UINT8(tx_power_level_, p_param_buf);
-  STREAM_TO_INT8(rssi_, p_param_buf);
-  STREAM_TO_UINT8(snr_, p_param_buf);
-  STREAM_TO_UINT8(unused_afh_channel_count_, p_param_buf);
-  STREAM_TO_UINT8(afh_select_unideal_channel_count_, p_param_buf);
-  STREAM_TO_UINT16(lsto_, p_param_buf);
-  STREAM_TO_UINT32(connection_piconet_clock_, p_param_buf);
-  STREAM_TO_UINT32(retransmission_count_, p_param_buf);
-  STREAM_TO_UINT32(no_rx_count_, p_param_buf);
-  STREAM_TO_UINT32(nak_count_, p_param_buf);
-  STREAM_TO_UINT32(last_tx_ack_timestamp_, p_param_buf);
-  STREAM_TO_UINT32(flow_off_count_, p_param_buf);
-  STREAM_TO_UINT32(last_flow_on_timestamp_, p_param_buf);
-  STREAM_TO_UINT32(buffer_overflow_bytes_, p_param_buf);
-  STREAM_TO_UINT32(buffer_underflow_bytes_, p_param_buf);
-  STREAM_TO_BDADDR(bdaddr_, p_param_buf);
-  STREAM_TO_UINT8(cal_failed_item_count_, p_param_buf);
-
   const auto now = system_clock::to_time_t(system_clock::now());
   localtime_r(&now, &tm_timestamp_);
 
@@ -124,9 +132,10 @@ std::string BqrVseSubEvt::ToString() const {
   std::stringstream ss_return_string;
   ss_return_string << QualityReportIdToString(quality_report_id_)
                    << ", Handle: " << loghex(connection_handle_) << ", "
+                   << "Transport: " << loghex(BTM_GetTransport(connection_handle_)) << " ,"
                    << PacketTypeToString(packet_types_) << ", "
                    << ((connection_role_ == 0) ? "Master" : "Slave ")
-                   << ", PwLv: " << loghex(tx_power_level_)
+                   << ", PwLv: " << std::to_string(tx_power_level_)
                    << ", RSSI: " << std::to_string(rssi_)
                    << ", SNR: " << std::to_string(snr_) << ", UnusedCh: "
                    << std::to_string(unused_afh_channel_count_)
@@ -263,10 +272,18 @@ void AddBqrEventToQueue(uint8_t length, uint8_t* p_stream) {
   }
   LOG(WARNING) << *p_bqr_event;
 
-  if (length >= kBqrParamTotalLen) {
-    btif_vendor_bqr_delivery_event(&(p_bqr_event->bdaddr_), p_stream, length);
+  if(p_bqr_event->quality_report_id_ == QUALITY_REPORT_ID_VENDOR_SPECIFIC) {
+    RawAddress bd_addr = RawAddress::kEmpty;
+    btif_vendor_bqr_delivery_event(&bd_addr, p_stream, length);
   } else {
-    LOG(WARNING) << __func__ << ": BQR event doesn't contain remote address";
+    if (length >= kBqrParamTotalLen + BD_ADDR_LEN) {
+      RawAddress bd_addr;
+      uint8_t* p_addr = p_stream + kBqrParamTotalLen;
+      STREAM_TO_BDADDR(bd_addr, p_addr);
+      btif_vendor_bqr_delivery_event(&bd_addr, p_stream, length);
+    } else {
+      LOG(WARNING) << __func__ << ": BQR event doesn't contain remote address";
+    }
   }
 
   kpBqrEventQueue->Enqueue(p_bqr_event.release());
@@ -326,8 +343,10 @@ void EnableBtQualityReport(bool is_enable) {
   LOG(INFO) << __func__ << ": is_enable: " << (is_enable);
 
   char bqr_prop_evtmask[PROPERTY_VALUE_MAX] = {0};
+  char bqr_vendor_prop_evtmask[PROPERTY_VALUE_MAX] = {0};
   char bqr_prop_interval_ms[PROPERTY_VALUE_MAX] = {0};
   osi_property_get(kpPropertyEventMask, bqr_prop_evtmask, "");
+  osi_property_get(kpPropertyVendorEventMask, bqr_vendor_prop_evtmask, "");
   osi_property_get(kpPropertyMinReportIntervalMs, bqr_prop_interval_ms, "");
 
   tBTM_BLE_VSC_CB cmn_vsc_cb;
@@ -355,6 +374,17 @@ void EnableBtQualityReport(bool is_enable) {
     bqr_config.report_action = REPORT_ACTION_ADD;
     bqr_config.quality_event_mask =
         static_cast<uint32_t>(atoi(bqr_prop_evtmask));
+    bqr_config.vendor_quality_event_mask =
+        static_cast<uint32_t>(atoi(bqr_vendor_prop_evtmask));
+    bqr_config.is_qc_bqr5_supported = btif_vendor_is_qc_bqr5_supported();
+
+    if(bqr_config.is_qc_bqr5_supported) {
+      bqr_config.quality_event_mask &= kBqr5QualityEventMaskAll;
+      bqr_config.vendor_quality_event_mask &= kVendorQualityEventMaskAll;
+    } else {
+      bqr_config.quality_event_mask &= kQualityEventMaskAll;
+    }
+
     if (!(bqr_config.quality_event_mask & kQualityEventMaskRootInflammation)) {
       LOG(WARNING) << __func__ << "Enabling Bluetooth Quality Report - Root inflammation event";
       // Enable BQR RIE by default.
@@ -367,12 +397,19 @@ void EnableBtQualityReport(bool is_enable) {
     bqr_config.minimum_report_interval_ms =
         static_cast<uint16_t>(atoi(bqr_prop_interval_ms));
 
-    if (vendor_cap_supported_version < kBqrConnectFailVersion) {
+    if (vendor_cap_supported_version < kBqrConnectFailVersion &&
+                !(bqr_config.is_qc_bqr5_supported)) {
       bqr_config.quality_event_mask = GetVsQualityEventMask(bqr_config.quality_event_mask);
     }
   } else {
     bqr_config.report_action = REPORT_ACTION_DELETE;
-    bqr_config.quality_event_mask = GetVsQualityEventMask(kQualityEventMaskAll);
+    bqr_config.is_qc_bqr5_supported = btif_vendor_is_qc_bqr5_supported();
+    if(bqr_config.is_qc_bqr5_supported) {
+      bqr_config.quality_event_mask = kBqr5QualityEventMaskAll;
+    } else {
+      bqr_config.quality_event_mask = kQualityEventMaskAll;
+    }
+    bqr_config.vendor_quality_event_mask = kVendorQualityEventMaskAll;
 #ifdef BLUEDROID_DEBUG
     // Dont disable FW dumps in userdebug/eng. builds.
     bqr_config.quality_event_mask = bqr_config.quality_event_mask & ~kQualityEventMaskDebugInfo;
@@ -404,9 +441,10 @@ void BqrVscCompleteCallback(tBTM_VSC_CMPL* p_vsc_cmpl_params) {
     return;
   }
 
-  if (p_vsc_cmpl_params->param_len != 5) {
+  if (p_vsc_cmpl_params->param_len != 5 &&
+         (btif_vendor_is_qc_bqr5_supported() && p_vsc_cmpl_params->param_len != 13)){
     LOG(FATAL) << __func__
-               << ": The length of returned parameters is not equal to 5: "
+               << ": The length of returned parameters is not equal to 5 or 13: "
                << std::to_string(p_vsc_cmpl_params->param_len);
     return;
   }
@@ -420,30 +458,65 @@ void BqrVscCompleteCallback(tBTM_VSC_CMPL* p_vsc_cmpl_params) {
 }
 
 void ConfigureBqr(const BqrConfiguration& bqr_config) {
-  const uint32_t vsQualityEventMaskAll = GetVsQualityEventMask(kQualityEventMaskAll);
+  if(!(bqr_config.is_qc_bqr5_supported)) {
+    const uint32_t vsQualityEventMaskAll = GetVsQualityEventMask(kQualityEventMaskAll);
 
-  if (bqr_config.report_action > REPORT_ACTION_CLEAR ||
-      bqr_config.quality_event_mask > vsQualityEventMaskAll ||
+    if (bqr_config.report_action > REPORT_ACTION_CLEAR ||
+        bqr_config.quality_event_mask > vsQualityEventMaskAll ||
+        bqr_config.minimum_report_interval_ms > kMinReportIntervalMaxMs) {
+      LOG(FATAL) << __func__ << ": Invalid Parameter"
+                 << ", Action: " << (int)bqr_config.report_action
+                 << ", Mask: " << loghex(bqr_config.quality_event_mask)
+                 << ", Interval: " << bqr_config.minimum_report_interval_ms;
+      return;
+    }
+
+  } else {
+    if (bqr_config.report_action > REPORT_ACTION_CLEAR ||
+      bqr_config.quality_event_mask > kBqr5QualityEventMaskAll ||
       bqr_config.minimum_report_interval_ms > kMinReportIntervalMaxMs) {
-    LOG(FATAL) << __func__ << ": Invalid Parameter"
+      LOG(FATAL) << __func__ << ": Invalid Parameter"
                << ", Action: " << (int)bqr_config.report_action
                << ", Mask: " << loghex(bqr_config.quality_event_mask)
                << ", Interval: " << bqr_config.minimum_report_interval_ms;
-    return;
+      return;
+    }
   }
 
   LOG(INFO) << __func__ << ": Action: " << bqr_config.report_action
             << ", Mask: " << loghex(bqr_config.quality_event_mask)
             << ", Interval: " << bqr_config.minimum_report_interval_ms;
 
-  uint8_t param[sizeof(BqrConfiguration)];
-  uint8_t* p_param = param;
-  UINT8_TO_STREAM(p_param, bqr_config.report_action);
-  UINT32_TO_STREAM(p_param, bqr_config.quality_event_mask);
-  UINT16_TO_STREAM(p_param, bqr_config.minimum_report_interval_ms);
+  if(bqr_config.is_qc_bqr5_supported &&
+     (bqr_config.vendor_quality_event_mask > kVendorQualityEventMaskAll)) {
+    LOG(FATAL) << __func__ << ": Invalid Parameter"
+               << ", Vendor Mask: " << loghex(bqr_config.vendor_quality_event_mask);
+    return;
+  }
 
-  BTM_VendorSpecificCommand(HCI_CONTROLLER_BQR_OPCODE_OCF, p_param - param,
-                            param, BqrVscCompleteCallback);
+  if(bqr_config.is_qc_bqr5_supported == false) {
+    uint8_t param[sizeof(BqrConfiguration)];
+    uint8_t* p_param = param;
+    UINT8_TO_STREAM(p_param, bqr_config.report_action);
+    UINT32_TO_STREAM(p_param, bqr_config.quality_event_mask);
+    UINT16_TO_STREAM(p_param, bqr_config.minimum_report_interval_ms);
+    BTM_VendorSpecificCommand(HCI_CONTROLLER_BQR_OPCODE_OCF, p_param - param,
+                              param, BqrVscCompleteCallback);
+  } else {
+    uint8_t param[sizeof(BqrConfiguration)];
+    uint8_t* p_param = param;
+    UINT8_TO_STREAM(p_param, bqr_config.report_action);
+    UINT32_TO_STREAM(p_param, bqr_config.quality_event_mask);
+    UINT16_TO_STREAM(p_param, bqr_config.minimum_report_interval_ms);
+    if(bqr_config.quality_event_mask & kQualityEventMaskVendorSpecific) {
+      UINT32_TO_STREAM(p_param, bqr_config.vendor_quality_event_mask);
+    } else {
+      UINT32_TO_STREAM(p_param, 0x00000000);
+    }
+    UINT32_TO_STREAM(p_param, 0x00000000);
+    BTM_VendorSpecificCommand(HCI_CONTROLLER_BQR_OPCODE_OCF, p_param - param,
+                              param, BqrVscCompleteCallback);
+  }
 }
 
 void DebugDump(int fd) {

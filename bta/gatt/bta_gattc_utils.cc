@@ -405,18 +405,22 @@ void bta_gattc_send_mtu_response(tBTA_GATTC_CLCB* p_clcb,
 }
 
 void bta_gattc_continue(tBTA_GATTC_CLCB* p_clcb) {
-  if (p_clcb->p_q_cmd != NULL) {
+  if (p_clcb->p_q_cmd != NULL && p_clcb->p_q_cmd->hdr.event != BTA_GATTC_API_CFG_MTU_EVT) {
     VLOG(1) << __func__ << "Already scheduled another request for conn_id = "
             << +p_clcb->bta_conn_id;
     return;
   }
 
-  while (!p_clcb->p_q_cmd_queue.empty()) {
-    tBTA_GATTC_DATA* p_q_cmd = p_clcb->p_q_cmd_queue.front();
-    if (p_q_cmd->hdr.event != BTA_GATTC_API_CFG_MTU_EVT) {
-      p_clcb->p_q_cmd_queue.pop_front();
-      bta_gattc_sm_execute(p_clcb, p_q_cmd->hdr.event, p_q_cmd);
-      return;
+  while (p_clcb->p_q_cmd != NULL || !p_clcb->p_q_cmd_queue.empty()) {
+    tBTA_GATTC_DATA* p_q_cmd = p_clcb->p_q_cmd;
+    if (p_q_cmd == NULL) {
+        VLOG(1) << __func__ << ": fetch commands from queue";
+        p_q_cmd = p_clcb->p_q_cmd_queue.front();
+        if (p_q_cmd->hdr.event != BTA_GATTC_API_CFG_MTU_EVT) {
+            p_clcb->p_q_cmd_queue.pop_front();
+            bta_gattc_sm_execute(p_clcb, p_q_cmd->hdr.event, p_q_cmd);
+            return;
+        }
     }
 
     /* The p_q_cmd is the MTU Request event. */
@@ -442,7 +446,8 @@ void bta_gattc_continue(tBTA_GATTC_CLCB* p_clcb) {
         VLOG(1) << __func__ << " Waiting p_clcb " << p_clcb;
         return;
       case MTU_EXCHANGE_NOT_DONE_YET:
-        p_clcb->p_q_cmd_queue.pop_front();
+        if (p_clcb->p_q_cmd == NULL)
+            p_clcb->p_q_cmd_queue.pop_front();
         bta_gattc_sm_execute(p_clcb, p_q_cmd->hdr.event, p_q_cmd);
         return;
     }
@@ -451,7 +456,11 @@ void bta_gattc_continue(tBTA_GATTC_CLCB* p_clcb) {
      * If MTU request was handled without actually ATT request,
      * it is ok to take another message from the queue and proceed.
      */
-    p_clcb->p_q_cmd_queue.pop_front();
+    if (p_clcb->p_q_cmd != NULL) {
+        p_clcb->p_q_cmd = NULL;
+    } else {
+        p_clcb->p_q_cmd_queue.pop_front();
+    }
     osi_free_and_reset((void**)&p_q_cmd);
   }
 }

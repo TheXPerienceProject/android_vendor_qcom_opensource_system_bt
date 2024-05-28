@@ -149,6 +149,17 @@ tACL_CONN* btm_bda_to_acl(const RawAddress& bda, tBT_TRANSPORT transport) {
   return ((tACL_CONN*)NULL);
 }
 
+tBT_TRANSPORT BTM_GetTransport(uint16_t hci_handle) {
+  tACL_CONN* p = &btm_cb.acl_db[0];
+  uint16_t xx;
+  for (xx = 0; xx < MAX_L2CAP_LINKS; xx++, p++) {
+    if ((p->in_use) && p->hci_handle == hci_handle) {
+      return (p->transport);
+    }
+  }
+  return 0;
+}
+
 /*******************************************************************************
  *
  * Function         btm_handle_to_acl_index

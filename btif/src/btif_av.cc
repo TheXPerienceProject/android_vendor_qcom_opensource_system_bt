@@ -3363,6 +3363,9 @@ static bool btif_av_state_started_handler(btif_sm_event_t event, void* p_data,
              if(btif_av_cb[index].suspend_cfm_pending == true) {
                BTA_AvkSendPedingSuspendCnf(btif_av_cb[index].bta_handle);
                btif_av_cb[index].suspend_cfm_pending = false;
+               if(btif_av_cb[index].flags & BTIF_AV_FLAG_LOCAL_SUSPEND_PENDING){
+                 btif_av_cb[index].flags &= ~BTIF_AV_FLAG_LOCAL_SUSPEND_PENDING;
+               }
              } else if(btif_av_cb[index].flags & BTIF_AV_FLAG_LOCAL_SUSPEND_PENDING){
                btif_av_cb[index].flags &= ~BTIF_AV_FLAG_LOCAL_SUSPEND_PENDING;
              } else {

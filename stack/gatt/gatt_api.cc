@@ -904,7 +904,7 @@ tGATT_STATUS GATTC_ConfigureMTU(uint16_t conn_id, uint16_t mtu) {
 
   if (p_clcb->p_tcb) {
     auto result = attp_send_cl_msg(*p_clcb->p_tcb, p_clcb, lcid, GATT_REQ_MTU, &gatt_cl_msg);
-    if (result == GATT_SUCCESS) {
+    if (result == GATT_SUCCESS || result == GATT_CMD_STARTED) {
       p_clcb->p_tcb->pending_user_mtu_exchange_value = mtu;
     }
     return result;

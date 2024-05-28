@@ -136,6 +136,7 @@ extern void btm_acl_chk_peer_pkt_type_support(tACL_CONN* p,
 extern uint16_t btm_get_max_packet_size(const RawAddress& addr);
 extern tACL_CONN* btm_bda_to_acl(const RawAddress& bda,
                                  tBT_TRANSPORT transport);
+extern tBT_TRANSPORT BTM_GetTransport(uint16_t hci_handle);
 extern bool btm_acl_notif_conn_collision(const RawAddress& bda);
 extern void btm_acl_update_conn_addr(uint16_t conn_handle,
                                      const RawAddress& address);

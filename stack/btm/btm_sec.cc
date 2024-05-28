@@ -59,6 +59,10 @@
 bool(APPL_AUTH_WRITE_EXCEPTION)(const RawAddress& bd_addr);
 #endif
 
+#ifdef ADV_AUDIO_FEATURE
+extern bool is_remote_support_adv_audio(const RawAddress remote_bdaddr);
+#endif
+
 /*******************************************************************************
  *             L O C A L    F U N C T I O N     P R O T O T Y P E S            *
  ******************************************************************************/
@@ -239,8 +243,7 @@ static bool access_secure_service_from_temp_bond(const tBTM_SEC_DEV_REC* p_dev_r
                                                  bool locally_initiated,
                                                  uint16_t security_req) {
   return !locally_initiated && (security_req & BTM_SEC_IN_AUTHENTICATE) &&
-    btm_dev_authenticated(p_dev_rec) &&
-    p_dev_rec->bond_type == BOND_TYPE_TEMPORARY;
+         p_dev_rec->bond_type == BOND_TYPE_TEMPORARY;
 }
 
 /*******************************************************************************
@@ -4340,6 +4343,17 @@ void btm_sec_encrypt_change(uint16_t handle, uint8_t status,
       p_dev_rec->sec_flags &= ~(BTM_SEC_LE_LINK_KEY_KNOWN);
       p_dev_rec->ble.key_type = BTM_LE_KEY_NONE;
     }
+#ifdef ADV_AUDIO_FEATURE
+    if (is_remote_support_adv_audio(p_dev_rec->ble.pseudo_addr) &&
+        (status == HCI_ERR_KEY_MISSING)) {
+       BTM_TRACE_ERROR("%s Adv Audio PIN/KEY Missing. Removing device entry %s",
+           __func__, p_dev_rec->ble.pseudo_addr.ToString().c_str());
+      tBTA_DM_MSG p_data;
+      p_data.remove_dev.bd_addr = p_dev_rec->ble.pseudo_addr;
+      bta_dm_remove_device(&p_data);
+      return;
+    }
+#endif
     btm_ble_link_encrypted(p_dev_rec->ble.pseudo_addr, encr_enable);
     return;
   } else {
