@@ -1432,7 +1432,9 @@ tBTM_STATUS BTM_SetEncryption(const RawAddress& bd_addr,
     return (BTM_SUCCESS);
   }
   /* enqueue security request if security is active */
-  if (p_dev_rec->p_callback || (p_dev_rec->sec_state != BTM_SEC_STATE_IDLE)) {
+  if (p_dev_rec->p_callback || ((p_dev_rec->sec_state != BTM_SEC_STATE_IDLE) &&
+    (((transport == BT_TRANSPORT_LE) && (p_dev_rec->sec_state != BTM_SEC_STATE_DISCONNECTING)) ||
+    ((transport == BT_TRANSPORT_BR_EDR) && (p_dev_rec->sec_state != BTM_SEC_STATE_DISCONNECTING_BLE))))) {
     BTM_TRACE_WARNING(
         "Security Manager: BTM_SetEncryption busy, enqueue request");
 

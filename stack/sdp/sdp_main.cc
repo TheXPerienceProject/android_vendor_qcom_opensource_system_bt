@@ -272,6 +272,8 @@ static void sdp_connect_cfm(uint16_t l2cap_cid, uint16_t result) {
         err = SDP_SECURITY_ERR;
       else if (result == HCI_ERR_HOST_REJECT_DEVICE)
         err = SDP_CONN_REJECTED;
+      else if (result == HCI_ERR_CONTROLLER_BUSY)
+        err = SDP_CONN_BUSY;
       else
         err = SDP_CONN_FAILED;
       if (p_ccb->p_cb)

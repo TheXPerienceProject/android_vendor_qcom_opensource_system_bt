@@ -1628,7 +1628,14 @@ void bta_dm_discover(tBTA_DM_MSG* p_data) {
   bta_dm_search_cb.p_btm_inq_info = BTM_InqDbRead(p_data->discover.bd_addr);
   bta_dm_search_cb.transport = p_data->discover.transport;
 
-  bta_dm_search_cb.name_discover_done = false;
+  char* p_name = BTM_SecReadDevName(p_data->discover.bd_addr);
+  if ((p_name != NULL) && (p_data->discover.transport == BT_TRANSPORT_BR_EDR)) {
+    strlcpy((char*)bta_dm_search_cb.peer_name, p_name, BD_NAME_LEN + 1);
+    bta_dm_search_cb.name_discover_done = true;
+  } else {
+    bta_dm_search_cb.name_discover_done = false;
+  }
+
   bta_dm_search_cb.uuid = p_data->discover.uuid;
   bta_dm_discover_device(p_data->discover.bd_addr);
 }
@@ -2249,7 +2256,10 @@ void bta_dm_sdp_result(tBTA_DM_MSG* p_data) {
 
     p_msg = (tBTA_DM_MSG*)osi_malloc(sizeof(tBTA_DM_MSG));
     p_msg->hdr.event = BTA_DM_DISCOVERY_RESULT_EVT;
-    p_msg->disc_result.result.disc_res.result = BTA_FAILURE;
+    if (p_data->sdp_event.sdp_result == SDP_CONN_BUSY)
+        p_msg->disc_result.result.disc_res.result = BTA_BUSY;
+    else
+        p_msg->disc_result.result.disc_res.result = BTA_FAILURE;
     p_msg->disc_result.result.disc_res.services =
         bta_dm_search_cb.services_found;
     p_msg->disc_result.result.disc_res.bd_addr = bta_dm_search_cb.peer_bdaddr;

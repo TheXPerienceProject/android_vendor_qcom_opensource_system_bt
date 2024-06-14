@@ -168,7 +168,7 @@ const Uuid UUID_HEARING_AID = Uuid::FromString("FDF0");
 
 #define BTIF_DM_DEFAULT_INQ_MAX_RESULTS 0
 #define BTIF_DM_DEFAULT_INQ_MAX_DURATION 10
-#define BTIF_DM_MAX_SDP_ATTEMPTS_AFTER_PAIRING 2
+#define BTIF_DM_MAX_SDP_ATTEMPTS_AFTER_PAIRING 3
 
 #define ENC_KEY_MATERIAL_LEN 24
 
@@ -455,7 +455,7 @@ static void btif_dm_sdp_delay_timer_cback(void* data) {
   btif_dm_get_remote_services_by_transport((RawAddress*)data, BT_TRANSPORT_BR_EDR);
 }
 
-void btif_dm_sdp_delay_timer(const RawAddress * bl_bdaddr) {
+void btif_dm_sdp_delay_timer(const RawAddress * bl_bdaddr, uint64_t interval_ms) {
 
   bl_device.bd_addr = *bl_bdaddr;
 
@@ -463,9 +463,9 @@ void btif_dm_sdp_delay_timer(const RawAddress * bl_bdaddr) {
     BTIF_TRACE_ERROR("%s:unable to allocate sdp_delay_timer",__func__);
     return;
   }
-  alarm_set(bl_device.sdp_delay_timer, BTIF_DM_SDP_DELAY_TIMER_MS,
+  alarm_set(bl_device.sdp_delay_timer, interval_ms,
             btif_dm_sdp_delay_timer_cback, &bl_device.bd_addr);
-  BTIF_TRACE_DEBUG("%s: sdp delay timer started", __func__);
+  BTIF_TRACE_DEBUG("%s: sdp delay timer started interval_ms = %d", __func__, interval_ms);
  }
 
 bt_status_t btif_in_execute_service_request(tBTA_SERVICE_ID service_id,
@@ -1452,7 +1452,7 @@ static void btif_dm_auth_cmpl_evt(tBTA_DM_AUTH_CMPL* p_auth_cmpl) {
 
     if (check_cod_hid(&bd_addr)) {
       BTIF_TRACE_DEBUG("%s: btif_dm_sdp_delay_timer started",__func__);
-      btif_dm_sdp_delay_timer(&bd_addr);
+      btif_dm_sdp_delay_timer(&bd_addr, BTIF_DM_SDP_DELAY_TIMER_MS);
       pairing_cb.sdp_attempts = 1;
       bond_state_changed(BT_STATUS_SUCCESS, bd_addr, BT_BOND_STATE_BONDED);
     } else {
@@ -1908,8 +1908,19 @@ static void btif_dm_search_services_evt(uint16_t event, char* p_param) {
           BTIF_TRACE_WARNING("%s:SDP failed after bonding re-attempting",
 
                            __func__);
-          pairing_cb.sdp_attempts++;
-          btif_dm_get_remote_services_by_transport(&bd_addr, BT_TRANSPORT_BR_EDR);
+
+
+          if (p_data->disc_res.result == BTA_BUSY) {
+            pairing_cb.sdp_attempts++;
+            /* Random values between 1500 to 1950ms */
+            period_ms_t interval_ms = (((time_get_os_boottime_ms() % 10) * 50) + BTIF_DM_SDP_DELAY_TIMER_MS * 3);
+            btif_dm_sdp_delay_timer(&bd_addr, interval_ms);
+          } else {
+            pairing_cb.sdp_attempts++;
+            pairing_cb.sdp_attempts++;
+            btif_dm_get_remote_services_by_transport(&bd_addr, BT_TRANSPORT_BR_EDR);
+          }
+
           return;
         } else {
           BTIF_TRACE_WARNING(

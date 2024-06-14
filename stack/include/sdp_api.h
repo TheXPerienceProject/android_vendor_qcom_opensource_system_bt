@@ -83,6 +83,7 @@
 #define SDP_SECURITY_ERR 0xFFF6
 #define SDP_CONN_REJECTED 0xFFF7
 #define SDP_CANCEL 0xFFF8
+#define SDP_CONN_BUSY 0xFFF9
 
 /* Define the PSM that SDP uses */
 #define SDP_PSM 0x0001

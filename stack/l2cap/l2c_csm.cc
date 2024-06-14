@@ -34,6 +34,7 @@
 #include "hcimsgs.h"
 #include "l2c_int.h"
 #include "l2cdefs.h"
+#include "sdpint.h"
 #include "device/include/interop.h"
 #include "hci/include/btsnoop.h"
 
@@ -134,6 +135,7 @@ static void l2c_csm_closed(tL2C_CCB* p_ccb, uint16_t event, void* p_data) {
   tL2CA_DISCONNECT_IND_CB* disconnect_ind;
   tL2CA_CONNECT_CFM_CB* connect_cfm;
   uint16_t sr_cids[5] = {0};
+  tCONN_CB* sdp_ccb = NULL;
 
   if (p_ccb->p_rcb == NULL) {
     L2CAP_TRACE_ERROR("L2CAP - LCID: 0x%04x  st: CLOSED  evt: %s p_rcb == NULL",
@@ -207,8 +209,15 @@ static void l2c_csm_closed(tL2C_CCB* p_ccb, uint16_t event, void* p_data) {
 
     case L2CEVT_LP_CONNECT_CFM_NEG: /* Link failed          */
       /* Disconnect unless ACL collision and upper layer wants to handle it */
+
+      if (p_ccb->p_rcb && p_ccb->p_rcb->psm == BT_PSM_SDP)
+          sdp_ccb= sdpu_find_ccb_by_cid(p_ccb->local_cid);
+
       if (((p_ci->status != HCI_ERR_CONNECTION_EXISTS) && (p_ci->status != HCI_ERR_CONTROLLER_BUSY))
           || interop_match_addr_or_name(INTEROP_DISABLE_CONNECTION_AFTER_COLLISION, &p_ccb->p_lcb->remote_bd_addr)
+          || ((p_ci->status == HCI_ERR_CONTROLLER_BUSY) && (p_ccb->p_rcb && p_ccb->p_rcb->psm == BT_PSM_SDP) &&
+              sdp_ccb && sdp_ccb->p_db && (sdp_ccb->p_db->num_uuid_filters == 1) &&
+              ((sdp_ccb->p_db->uuid_filters[0] == bluetooth::Uuid::From16Bit(UUID_PROTOCOL_L2CAP)) || (sdp_ccb->p_db->uuid_filters[0] == bluetooth::Uuid::From16Bit(UUID_SERVCLASS_PNP_INFORMATION))))
           || !btm_acl_notif_conn_collision(p_ccb->p_lcb->remote_bd_addr)) {
         if (p_ccb->our_cfg.fcr.mode != L2CAP_FCR_ECFC_MODE) {
           L2CAP_TRACE_API(
@@ -820,7 +829,7 @@ static void l2c_csm_term_w4_sec_comp(tL2C_CCB* p_ccb, uint16_t event,
 
           /* Waiting for the info resp, tell the peer to set a longer timer */
           l2cu_send_peer_connect_rsp(p_ccb, L2CAP_CONN_PENDING, 0);
-        } 
+        }
       } else {
         if (!p_ccb->p_lcb->w4_info_rsp) {
           l2cu_set_coc_chnl_state(p_ccb, CST_W4_L2CA_CONNECT_RSP);

@@ -127,12 +127,20 @@ uint8_t bta_hh_find_cb(const RawAddress& bda) {
  ******************************************************************************/
 void bta_hh_clean_up_kdev(tBTA_HH_DEV_CB* p_cb) {
   uint8_t index;
+#if (BTA_HH_DEBUG == TRUE)
+  APPL_TRACE_DEBUG("bta_hh_clean_up_kdev %d", p_cb->hid_handle);
+#endif
 
   if (p_cb->hid_handle != BTA_HH_INVALID_HANDLE) {
 #if (BTA_HH_LE_INCLUDED == TRUE)
-    if (p_cb->is_le_device)
-      bta_hh_cb.le_cb_index[BTA_HH_GET_LE_CB_IDX(p_cb->hid_handle)] =
-          BTA_HH_IDX_INVALID;
+    if (p_cb->is_le_device){
+      if (BTA_HH_IS_LE_DEV_HDL(p_cb->hid_handle)) {
+        if (BTA_HH_IS_LE_DEV_HDL_VALID(p_cb->hid_handle)){
+          bta_hh_cb.le_cb_index[BTA_HH_GET_LE_CB_IDX(p_cb->hid_handle)] =
+              BTA_HH_IDX_INVALID;
+        }
+      }
+    }
     else if (p_cb->hid_handle < BTA_HH_MAX_KNOWN)
 #endif
       bta_hh_cb.cb_index[p_cb->hid_handle] = BTA_HH_IDX_INVALID;
